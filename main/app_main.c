@@ -22,20 +22,30 @@
 #include "buzzer_handler.h"
 #include "card_handler.h"
 
-char timestamp[256]             = "0";
-simple_structure *registers_data = NULL;
-int registers_size              = 0;
+#define REG_READER_SIZE 1000
+
+char timestamp[100]              = "0";
+card_structure *registers_data = NULL;
+int registers_size               = 0;
 
 void print_registers(void){
     printf("Timestamp = %s, Registers size = %d\n", timestamp, registers_size);
-    for(int i = 0; i < registers_size; i++){
-        printf("Struct values:");
-        printf(" cardType = %u", registers_data[i].cardType);
-        printf(", code = [%u, %u]\n", registers_data[i].code1, registers_data[i].code2);
+    FILE *f = fopen(REG_FILE,"r");
+    int read_size = 0;
+    while((read_size=fread(registers_data, CARD_FULL_SIZE, REG_READER_SIZE, f)) > 0){
+        for(int i = 0; i < read_size; i++){
+            printf("Struct values:");
+            printf(" cardType = %u", registers_data[i].cardType);
+            printf(", code = [%u, %u]\n", registers_data[i].code1, registers_data[i].code2);
+        }
     }
+    fclose(f);
 }
 
 void app_main(){
+
+    registers_data = (card_structure *) malloc(REG_READER_SIZE * CARD_FULL_SIZE);
+
     rgb_init();
     buzzer_init();
     rgb_fixed_leds(RGB_RED);
@@ -43,7 +53,7 @@ void app_main(){
     wiegand_init();
 
     unlink(REG_FILE);
-    unlink(REG_TMP_FILE);
+    unlink(REG_FILE_JSON);
     unlink(REG_TIMESTAMP);
 
     rgb_fixed_leds(RGB_YELLOW);
@@ -55,6 +65,7 @@ void app_main(){
     rgb_rainbow_leds();
 
     data_load();
+    //print_registers();
 
     xTaskCreate(wiegand_read, "wiegand_read", 2048, NULL, 10, NULL);
 }

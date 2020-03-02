@@ -9,14 +9,13 @@
 #include "data_handler.h"
 #include "parse_handler.h"
 
-extern simple_structure *registers_data;
+extern card_structure *registers_data;
 extern int registers_size;
-extern char timestamp[256];
+extern char timestamp[100];
 
-static const char *TAG = "data_handler";
-static const char *TAG_HTTPS = "data_handler";
-
-static const char *url             = "https://gk2-api.gestkontrol.cl/control_acceso/obtenerMediosAccesoControlador";
+static const char *TAG             = "data_handler";
+static const char *TAG_HTTPS       = "https_handler";
+static const char *url             = "http://192.168.10.241/control_acceso/obtenerMediosAccesoControlador";
 static const char *id_controlador  = "16";
 static const char *lastTimestamp   = timestamp;
 static const char *database        = "GK2_Titanium";
@@ -41,20 +40,11 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt){
         case HTTP_EVENT_ON_DATA:
             ESP_LOGI(TAG_HTTPS, "DATA, len=%d", evt->data_len);
             FILE *f;
-            if(strcmp(timestamp, "0") == 0){
-                f = fopen(REG_FILE, "a");
-                if (f == NULL)
-                    break;
-                fwrite((char*)evt->data, 1, evt->data_len, f);
-                fclose(f);
-            }
-            else{
-                f = fopen(REG_TMP_FILE, "a");
-                if (f == NULL)
-                    break;
-                fwrite((char*)evt->data, 1, evt->data_len, f);
-                fclose(f);
-            }
+            f = fopen(REG_FILE_JSON, "a");
+            if (f == NULL)
+                break;
+            fwrite((char*)evt->data, 1, evt->data_len, f);
+            fclose(f);
             break;
         case HTTP_EVENT_ON_FINISH:
             ESP_LOGI(TAG_HTTPS, "FINISH");
@@ -75,9 +65,9 @@ void data_load(void){
         f = fopen(REG_FILE, "r");
         card_structure tempCard = {0};
         ESP_LOGI(TAG, "Loaded timestamp = %s | Total registers = %d", timestamp, registers_size);
-        registers_data = (simple_structure *) malloc(sizeof(simple_structure) * registers_size);
+        registers_data = (card_structure *) malloc(CARD_FULL_SIZE * registers_size);
         for(int i = 0; i < registers_size; i++){
-            fread(&tempCard, sizeof(card_structure), 1, f);
+            fread(&tempCard, CARD_FULL_SIZE, 1, f);
             registers_data[i].cardType = tempCard.cardType;
             registers_data[i].code1    = tempCard.code1;
             registers_data[i].code2    = tempCard.code2;
@@ -85,18 +75,10 @@ void data_load(void){
         fclose(f);
     }
     else{
-        if (stat(REG_FILE, &st) == 0){
-            strcpy(timestamp, "0");
-            registers_size = 0;
-            ESP_LOGI(TAG, "Registers file exists for is not parsed");
-            parse_data();
-        }
-        else{
-            strcpy(timestamp, "0");
-            registers_size = 0;
-            ESP_LOGI(TAG, "Data not loaded");
-            data_request();
-        }
+        strcpy(timestamp, "0");
+        registers_size = 0;
+        ESP_LOGI(TAG, "Data not loaded");
+        data_request();
     }
 }
 
@@ -105,9 +87,10 @@ void data_request(void){
     esp_http_client_config_t config = {
         .url            = url,
         .event_handler  = _http_event_handle,
-        .transport_type = HTTP_TRANSPORT_OVER_SSL,
-        .buffer_size    = 32768,
-        .buffer_size_tx = 32768,
+        //.transport_type = HTTP_TRANSPORT_OVER_SSL,
+        .buffer_size    = 16384,
+        .buffer_size_tx = 16384,
+        //.port           = 8080,
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -124,6 +107,8 @@ void data_request(void){
     strcat(post_data, api_token);
     strcat(post_data, "&nombreInstancia=");
     strcat(post_data, nombreInstancia);
+    strcat(post_data, "&binary=");
+    strcat(post_data, "0");
 
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_post_field(client, post_data, strlen(post_data));
@@ -131,9 +116,11 @@ void data_request(void){
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG_HTTPS, "Status = %d, content_length = %d",
+        ESP_LOGI(
+                TAG_HTTPS, "Status = %d, content_length = %d",
                 esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client));
+                esp_http_client_get_content_length(client)
+                );
     }
     esp_http_client_cleanup(client);
 
