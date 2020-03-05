@@ -4,11 +4,9 @@
 extern "C" {
 #endif
 
-#include "esp_err.h"
-#include "esp_http_client.h"
+#include "definitions.h"
 
-void data_load(void);
-void data_request(void);
+void data_request(void *arg);
 
 #ifdef __cplusplus
 }

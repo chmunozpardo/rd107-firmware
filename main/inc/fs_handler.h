@@ -4,10 +4,7 @@
 extern "C" {
 #endif
 
-#include "esp_log.h"
-#include "esp_event.h"
-#include "esp_err.h"
-#include "esp_spiffs.h"
+#include "definitions.h"
 
 void fs_init(void);
 

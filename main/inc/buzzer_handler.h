@@ -4,9 +4,7 @@
 extern "C" {
 #endif
 
-#include "driver/gpio.h"
-
-#define BUZZER_GPIO   21
+#include "definitions.h"
 
 void buzzer_init(void);
 

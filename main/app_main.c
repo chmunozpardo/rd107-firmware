@@ -1,18 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "driver/gpio.h"
-#include "esp_system.h"
-#include "esp_event.h"
-#include "esp_err.h"
-#include "esp_log.h"
-
-#include "nvs_flash.h"
-#include "tcpip_adapter.h"
-
 #include "connect.h"
 #include "parse_handler.h"
 #include "data_handler.h"
@@ -22,50 +7,67 @@
 #include "buzzer_handler.h"
 #include "card_handler.h"
 
-#define REG_READER_SIZE 1000
+uint64_t timestamp              =    0;
+CARD *registers_data            = NULL;
+uint32_t registers_size         =    0;
+xQueueHandle rgb_task_queue     = NULL;
+SemaphoreHandle_t reg_semaphore = NULL; 
+SemaphoreHandle_t rgb_semaphore = NULL;
+SemaphoreHandle_t wiegand_semaphore = NULL;
 
-char timestamp[100]              = "0";
-card_structure *registers_data = NULL;
-int registers_size               = 0;
-
-void print_registers(void){
-    printf("Timestamp = %s, Registers size = %d\n", timestamp, registers_size);
+void print_registers(void)
+{
+    struct timeval now;
+    float current_time =  0;
+    gettimeofday(&now, NULL);
+    current_time = now.tv_sec + now.tv_usec/1000000.0;
+    printf("Timestamp = %llu, Registers size = %d\n", timestamp, registers_size);
     FILE *f = fopen(REG_FILE,"r");
     int read_size = 0;
-    while((read_size=fread(registers_data, CARD_FULL_SIZE, REG_READER_SIZE, f)) > 0){
-        for(int i = 0; i < read_size; i++){
-            printf("Struct values:");
-            printf(" cardType = %u", registers_data[i].cardType);
-            printf(", code = [%u, %u]\n", registers_data[i].code1, registers_data[i].code2);
+    while((read_size=fread(registers_data, CARD_FULL_SIZE, CARD_READER_SIZE, f)) > 0)
+    {
+        for(int i = 0; i < read_size; i++)
+        {
+            printf("Card = %u, %u, %u\n", registers_data[i].cardType, registers_data[i].code1, registers_data[i].code2);
         }
+        printf("Read size = %d\n", read_size);
     }
     fclose(f);
+    gettimeofday(&now, NULL);
+    current_time = now.tv_sec + now.tv_usec/1000000.0 - current_time;
+    printf("Elapsed time = %f\n", current_time);
 }
 
-void app_main(){
+static void setup()
+{
+    registers_data    = (CARD *) malloc(CARD_READER_SIZE * CARD_FULL_SIZE);
+    reg_semaphore     = xSemaphoreCreateMutex();
+    rgb_semaphore     = xSemaphoreCreateMutex();
+    wiegand_semaphore = xSemaphoreCreateMutex();
 
-    registers_data = (card_structure *) malloc(REG_READER_SIZE * CARD_FULL_SIZE);
+    fs_init();
+    remove(REG_FILE);
+    remove(REG_FILE_JSON);
+    remove(REG_TIMESTAMP);
 
     rgb_init();
     buzzer_init();
-    rgb_fixed_leds(RGB_RED);
-    fs_init();
+    xTaskCreatePinnedToCore(rgb_task    , "rgb_controller", 2048, NULL, 20, NULL, 0);
+
     wiegand_init();
 
-    unlink(REG_FILE);
-    unlink(REG_FILE_JSON);
-    unlink(REG_TIMESTAMP);
+    RGB_SIGNAL(RGB_RED, RGB_LEDS, 0);
 
-    rgb_fixed_leds(RGB_YELLOW);
-    ESP_ERROR_CHECK( nvs_flash_init() );
+    nvs_flash_init();
     tcpip_adapter_init();
-    ESP_ERROR_CHECK( esp_event_loop_create_default() );
-    ESP_ERROR_CHECK( wifi_connect() );
+    esp_event_loop_create_default();
+    wifi_connect();
 
-    rgb_rainbow_leds();
+    xTaskCreatePinnedToCore(wiegand_read, "wiegand_read", 2048, NULL,  0, NULL, 1);
+    xTaskCreatePinnedToCore(data_request, "data_request", 8192, NULL, 10, NULL, 0);
+}
 
-    data_load();
-    //print_registers();
-
-    xTaskCreate(wiegand_read, "wiegand_read", 2048, NULL, 10, NULL);
+void app_main()
+{
+    setup();
 }

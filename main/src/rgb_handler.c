@@ -1,7 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "rgb_handler.h"
 
 static const char* TAG = "rgb_handler";
@@ -17,16 +13,51 @@ static uint8_t r[RGB_LEDS] = {255, 243, 181,  80,   0,   0,   0,   0,   0,   0, 
 static uint8_t g[RGB_LEDS] = {  0,  80, 181, 243, 243, 181,  80,   0,  80, 181, 243, 243, 181,  80};
 static uint8_t b[RGB_LEDS] = {  0,   0,   0,   0,  80, 181, 243, 255, 243, 181,  80,   0,   0,   0};
 
-static void rgb_ws2812(uint8_t r, uint8_t g, uint8_t b){
-    for(int i = 0; i < 8; i++)
-        array[i] = ((g >> (7 - i)) & (0x01))== 0x01 ? WS2812_ON : WS2812_OFF;
-    for(int i = 0; i < 8; i++)
-        array[i+8] = ((r >> (7 - i)) & (0x01)) == 0x01 ? WS2812_ON : WS2812_OFF;
-    for(int i = 0; i < 8; i++)
-        array[i+16] = ((b >> (7 - i)) & (0x01)) == 0x01 ? WS2812_ON : WS2812_OFF;
+static void rgb_ws2812(uint8_t r, uint8_t g, uint8_t b)
+{
+    for(int i = 0; i < 8; i++) array[i +  0] = ((g >> (7 - i)) & (0x01)) == 0x01 ? WS2812_ON : WS2812_OFF;
+    for(int i = 0; i < 8; i++) array[i +  8] = ((r >> (7 - i)) & (0x01)) == 0x01 ? WS2812_ON : WS2812_OFF;
+    for(int i = 0; i < 8; i++) array[i + 16] = ((b >> (7 - i)) & (0x01)) == 0x01 ? WS2812_ON : WS2812_OFF;
 }
 
-void rgb_init(void){
+static void rgb_rainbow_leds(void)
+{
+    for(int j = 0; j < RGB_LEDS; j++)
+    {
+        rgb_ws2812(r[j%RGB_LEDS], g[j%RGB_LEDS], b[j%RGB_LEDS]);
+        ret = spi_device_polling_transmit(spi, &t);
+    }
+    for(int j = 0; j < RGB_RESET_TIME; j++)
+    {
+        ret = spi_device_polling_transmit(spi, &t_emp);
+    }
+}
+
+static void rgb_fixed_leds(uint8_t r, uint8_t g, uint8_t b, uint8_t leds)
+{
+    for(int j = 0; j < RGB_LEDS; j++)
+    {
+        if(j <= leds)
+        {
+            rgb_ws2812(r, g, b);
+            ret = spi_device_polling_transmit(spi, &t);
+        }
+        else
+        {
+            rgb_ws2812(0, 0, 0);
+            ret = spi_device_polling_transmit(spi, &t);
+        }
+    }
+    for(int j = 0; j < RGB_RESET_TIME; j++)
+    {
+        ret = spi_device_polling_transmit(spi, &t_emp);
+    }
+}
+
+void rgb_init(void)
+{
+    rgb_task_queue = xQueueCreate(10, sizeof(int)*2);
+
     memset(&t, 0, sizeof(t));
     t.length = 8*RGB_DATA_N;
     t.tx_buffer = &array;
@@ -37,7 +68,8 @@ void rgb_init(void){
     t_emp.tx_buffer = &data;
     t_emp.user = (void*)0;
 
-    spi_bus_config_t buscfg={
+    spi_bus_config_t buscfg=
+    {
         .miso_io_num = PIN_NUM_MISO,
         .mosi_io_num = PIN_NUM_MOSI,
         .sclk_io_num = PIN_NUM_CLK,
@@ -46,7 +78,8 @@ void rgb_init(void){
         .max_transfer_sz = RGB_DATA_N*RGB_LEDS
     };
 
-    spi_device_interface_config_t devcfg={
+    spi_device_interface_config_t devcfg=
+    {
         .clock_speed_hz = 6400000,
         .mode = 0,
         .spics_io_num = PIN_NUM_CS,
@@ -61,22 +94,15 @@ void rgb_init(void){
     ESP_ERROR_CHECK(ret);
 }
 
-void rgb_rainbow_leds(void){
-    for(int j = 0; j < RGB_LEDS; j++){
-        rgb_ws2812(r[j%RGB_LEDS], g[j%RGB_LEDS], b[j%RGB_LEDS]);
-        ret = spi_device_polling_transmit(spi, &t);
-    }
-    for(int j = 0; j < RGB_RESET_TIME; j++){
-        ret = spi_device_polling_transmit(spi, &t_emp);
-    }
-}
-
-void rgb_fixed_leds(uint8_t r, uint8_t g, uint8_t b){
-    for(int j = 0; j < RGB_LEDS; j++){
-        rgb_ws2812(r, g, b);
-        ret = spi_device_polling_transmit(spi, &t);
-    }
-    for(int j = 0; j < RGB_RESET_TIME; j++){
-        ret = spi_device_polling_transmit(spi, &t_emp);
+void rgb_task(void *arg)
+{
+    uint8_t status[4] = {0};
+    while(1)
+    {
+        if(xQueueReceive(rgb_task_queue, &status, portMAX_DELAY))
+        {
+            ESP_LOGI(TAG, "Setting LEDs value to [R, G, B] = [%u, %u, %u]", status[0], status[1], status[2]);
+            rgb_fixed_leds(status[0], status[1], status[2], status[3]);
+        }
     }
 }
