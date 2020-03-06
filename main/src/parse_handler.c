@@ -2,7 +2,14 @@
 
 static const char* TAG = "parse_handler";
 
-static void parse_insert_card(CARD *input, uint32_t read_size)
+static DRAM_ATTR char line[10]      =   "";
+static DRAM_ATTR uint32_t count     =    0;
+static DRAM_ATTR uint32_t new_regs  =    0;
+static DRAM_ATTR uint32_t read_size =    0;
+static FILE *f = NULL;
+static FILE *g = NULL;
+
+static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
 {
     FILE *f           = NULL;
     bool check        =    0;
@@ -40,16 +47,8 @@ static void parse_insert_card(CARD *input, uint32_t read_size)
     }
 }
 
-void parse_data(void)
+void IRAM_ATTR parse_data(void)
 {
-    char line[100]      =   "";
-    uint32_t count      =    0;
-    uint32_t new_regs   =    0;
-    uint32_t read_size  =    0;
-    FILE *f             = NULL;
-    FILE *g             = NULL;
-    CARD *data_importer = NULL;
-
     f = fopen(REG_FILE_JSON, "r");
     if (f == NULL)
     {
@@ -72,8 +71,7 @@ void parse_data(void)
         ESP_LOGI(TAG, "Importing registers...");
         if(timestamp > 0)
         {
-            count         = new_regs / COPY_SIZE;
-            data_importer = (CARD *) malloc(CARD_FULL_SIZE * COPY_SIZE);
+            count = new_regs / COPY_SIZE;
             for(int i = 0; i < count; i++)
             {
                 read_size  = fread (data_importer, CARD_FULL_SIZE, COPY_SIZE, f);
@@ -81,7 +79,6 @@ void parse_data(void)
             };
             read_size  = fread (data_importer, CARD_FULL_SIZE, new_regs%COPY_SIZE, f);
             parse_insert_card(data_importer, read_size);
-            free(data_importer);
         }
         else
         {
@@ -110,7 +107,7 @@ void parse_data(void)
     }
 
     fscanf(f, " ,\"currentTimestamp\":%llu},\"estado\":%[^}]", &timestamp, line);
-    ESP_LOGI(TAG, "Timestamp  = %llu", timestamp);
+    ESP_LOGI(TAG, "Timestamp = %llu", timestamp);
     ESP_LOGI(TAG, "Status = %s", line);
 
     g = fopen(REG_TIMESTAMP, "w");

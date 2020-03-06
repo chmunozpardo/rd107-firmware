@@ -5,7 +5,12 @@
 
 static const char *TAG = "card_handler";
 
-void card_search(uint8_t size, uint64_t value)
+static DRAM_ATTR CARD inputCard     =  {0};
+static DRAM_ATTR bool status        =    0;
+static DRAM_ATTR uint32_t read_size =    0;
+static FILE *f                      = NULL;
+
+void IRAM_ATTR card_search(uint8_t size, uint64_t value)
 {
     #ifdef DEBUG_INFO
         struct timeval now;
@@ -14,9 +19,6 @@ void card_search(uint8_t size, uint64_t value)
         current_time = now.tv_sec + now.tv_usec/1000000.0;
     #endif
 
-    CARD inputCard     = {0};
-    bool status        =   0;
-    uint32_t read_size =   0;
     if(size == 26)
     {
         inputCard.cardType = 2;
@@ -37,7 +39,8 @@ void card_search(uint8_t size, uint64_t value)
     }
 
     xSemaphoreTake(reg_semaphore, portMAX_DELAY);
-    FILE *f = fopen(REG_FILE, "r");
+    f = fopen(REG_FILE, "r");
+    ESP_LOGI(TAG, "Searching card %u, [%u,%u] in database", inputCard.cardType, inputCard.code1, inputCard.code2);
 
     if(f == NULL)
     {
@@ -45,8 +48,6 @@ void card_search(uint8_t size, uint64_t value)
         xSemaphoreGive(reg_semaphore);
         return;
     }
-
-    ESP_LOGI(TAG, "Searching card %u, [%u,%u] in database", inputCard.cardType, inputCard.code1, inputCard.code2);
 
     while((read_size = fread(registers_data, CARD_FULL_SIZE, CARD_READER_SIZE, f)) > 0)
     {

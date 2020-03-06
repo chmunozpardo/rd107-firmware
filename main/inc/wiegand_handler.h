@@ -7,7 +7,7 @@ extern "C" {
 #include "definitions.h"
 
 void wiegand_init(void);
-void wiegand_read(void *arg);
+void wiegand_task(void *arg);
 
 #ifdef __cplusplus
 }

@@ -2,8 +2,34 @@
 #include "data_handler.h"
 #include "parse_handler.h"
 
-static const char *TAG       = "data_handler";
-static const char *TAG_HTTPS = "https_handler";
+static esp_err_t _http_event_handle(esp_http_client_event_t *evt);
+
+static const char *TAG            = "data_handler";
+static const char *TAG_HTTPS      = "https_handler";
+static DRAM_ATTR const char *POST_DATA_FULL = \
+                                    "id_controlador="\
+                                    ID_CONTROLADOR\
+                                    "&database="\
+                                    DATABASE\
+                                    "&api_token="\
+                                    API_TOKEN\
+                                    "&nombreInstancia="\
+                                    NOMBRE_INSTANCIA\
+                                    "&lastTimestamp=";
+
+static DRAM_ATTR char post_data[200]    = "";
+static DRAM_ATTR char lastTimestamp[20] = "0";
+
+static DRAM_ATTR esp_http_client_handle_t client;
+static DRAM_ATTR esp_http_client_config_t config =
+    {
+        .url            = URL,
+        .event_handler  = _http_event_handle,
+        .transport_type = HTTP_TRANSPORT_OVER_SSL,
+        .buffer_size    = HTTPS_BUFFER,
+        .buffer_size_tx = HTTPS_BUFFER,
+        .port           = 443,
+    };
 
 static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 {
@@ -41,54 +67,42 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-void data_request(void *arg)
+void IRAM_ATTR data_task(void *arg)
 {
     struct stat st;
+    bool start_up = 0;
     if (stat(REG_TIMESTAMP, &st) == 0)
     {
-        FILE *f = fopen(REG_TIMESTAMP, "r");
+        start_up = 1;
+
+        FILE *f  = fopen(REG_TIMESTAMP, "r");
         fscanf(f, "%llu %u", &timestamp, &registers_size);
         fclose(f);
+
         ESP_LOGI(TAG, "Loaded data");
         RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
+        vTaskPrioritySet(wiegand_task_handle, 1);
+        vTaskPrioritySet(rgb_task_handle    , 2);
     }
     else
     {
+        start_up       = 0;
         timestamp      = 0;
         registers_size = 0;
         ESP_LOGI(TAG, "Empty local data");
     }
 
+    client = esp_http_client_init(&config);
+
+    strcpy(post_data, POST_DATA_FULL);
+    sprintf(lastTimestamp, "%llu", timestamp);
+    strcat(post_data, lastTimestamp);
+
     while(1)
     {
         ESP_LOGI(TAG, "Last timestamp = %llu | Total registers = %u", timestamp, registers_size);
-        esp_http_client_config_t config =
-        {
-            .url            = URL,
-            .event_handler  = _http_event_handle,
-            //.transport_type = HTTP_TRANSPORT_OVER_SSL,
-            .buffer_size    = 16384,
-            .buffer_size_tx = 16384,
-            //.port           = 8080,
-        };
 
         esp_http_client_handle_t client = esp_http_client_init(&config);
-
-        char post_data[200]     = "";
-        char lastTimestamp[100] = "0";
-
-        strcat(post_data, "id_controlador=");
-        strcat(post_data, ID_CONTROLADOR);
-        strcat(post_data, "&database=");
-        strcat(post_data, DATABASE);
-        strcat(post_data, "&api_token=");
-        strcat(post_data, API_TOKEN);
-        strcat(post_data, "&nombreInstancia=");
-        strcat(post_data, NOMBRE_INSTANCIA);
-        strcat(post_data, "&lastTimestamp=");
-        sprintf(lastTimestamp, "%llu", timestamp);
-        strcat(post_data, lastTimestamp);
-
         esp_http_client_set_method(client, HTTP_METHOD_POST);
         esp_http_client_set_post_field(client, post_data, strlen(post_data));
 
@@ -101,9 +115,18 @@ void data_request(void *arg)
                 esp_http_client_get_status_code(client),
                 esp_http_client_get_content_length(client)
                 );
-            esp_http_client_cleanup(client);
             parse_data();
+            if(start_up == 0){
+                start_up = 1;
+                vTaskPrioritySet(wiegand_task_handle, 1);
+                vTaskPrioritySet(rgb_task_handle    , 2);
+            }
         }
+        esp_http_client_cleanup(client);
+
+        strcpy(post_data, POST_DATA_FULL);
+        sprintf(lastTimestamp, "%llu", timestamp);
+        strcat(post_data, lastTimestamp);
 
         vTaskDelay(5000/portTICK_PERIOD_MS);
     }

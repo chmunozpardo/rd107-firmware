@@ -6,7 +6,7 @@ extern "C" {
 
 #include "definitions.h"
 
-void data_request(void *arg);
+void data_task(void *arg);
 
 #ifdef __cplusplus
 }
