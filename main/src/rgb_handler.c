@@ -72,10 +72,10 @@ void rgb_init(void)
     };
 
     ESP_LOGI(TAG, "Initializing SPI for RGB");
-    ret = spi_bus_initialize(HSPI_HOST, &buscfg, 1);
+    ret = spi_bus_initialize(VSPI_HOST, &buscfg, 1);
     ESP_ERROR_CHECK(ret);
 
-    ret = spi_bus_add_device(HSPI_HOST, &devcfg, &spi);
+    ret = spi_bus_add_device(VSPI_HOST, &devcfg, &spi);
     ESP_ERROR_CHECK(ret);
 }
 

@@ -17,13 +17,13 @@ menu "Connection Configuration"
     if EXAMPLE_CONNECT_WIFI
         config EXAMPLE_WIFI_SSID
             string "WiFi SSID"
-            default "DreamIT"
+            default "Movistar2,4GHZ_CC0830"
             help
                 SSID (network name) for the example to connect to.
 
         config EXAMPLE_WIFI_PASSWORD
             string "WiFi Password"
-            default "dreamit1q2w3e.."
+            default "VeSJK9TvXNpTX2MoK2pY"
             help
                 WiFi password (WPA or WPA2) for the example to use.
                 Can be left blank if the network has no security set.

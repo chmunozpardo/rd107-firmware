@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
@@ -21,6 +22,7 @@
 #include "connect.h"
 
 #define URL                 "https://alpha-api.gestkontrol.cl/control_acceso/obtenerMediosAccesoControladorBinario"
+#define URL_COMMAND         "https://alpha-api.gestkontrol.cl/control_acceso/obtenerMediosAccesoControladorBinario"
 #define ID_CONTROLADOR      "16"
 #define DATABASE            "GK2_Titanium"
 #define API_TOKEN           "dreamit-testing-rd107-2020"
@@ -65,9 +67,24 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 
 // SPI configuration for WS2812
 #define PIN_NUM_MISO    -1
-#define PIN_NUM_MOSI    23
+#define PIN_NUM_MOSI    4
 #define PIN_NUM_CLK     -1
 #define PIN_NUM_CS      -1
+
+// SPI configuration for TFT 3.5" display
+#define LCD_FREQ            20000000
+
+#define LCD_PIN_CLK         25
+#define LCD_PIN_MISO        27
+#define LCD_PIN_MOSI        33
+#define LCD_PIN_CS          5
+
+#define LCD_PIN_DC          23
+#define LCD_PIN_IRQ         26
+#define LCD_PIN_BUSY        27
+
+#define QR_SIZE             14
+#define QR_OFFSET           (320-QR_SIZE*21)/2
 
 // WS2812 parameters
 #define RGB_LEDS        14  // Number of pixels

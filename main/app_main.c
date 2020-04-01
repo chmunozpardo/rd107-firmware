@@ -6,6 +6,10 @@
 #include "buzzer_handler.h"
 #include "card_handler.h"
 
+#include "tft_handler.h"
+#include "touch_handler.h"
+#include "Waveshare_ILI9486.h"
+
 uint32_t registers_size = 0;
 uint64_t timestamp      = 0;
 
@@ -25,6 +29,11 @@ static void setup()
 {
     reg_semaphore = xSemaphoreCreateMutex();
     rgb_semaphore = xSemaphoreCreateMutex();
+
+    LCD_SCAN_DIR Lcd_ScanDir = SCAN_DIR_DFT;
+    LCD_Init( Lcd_ScanDir, 200);
+    LCD_Clear(WHITE);
+    GUI_QR("Hola");
 
     fs_init();
     remove(REG_FILE);
