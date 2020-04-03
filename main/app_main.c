@@ -52,9 +52,10 @@ static void setup()
     remove(REG_FILE_JSON);
     remove(REG_TIMESTAMP);
 
-    xTaskCreatePinnedToCore(qr_task     , "bzr_task    ", 4096, NULL, 1,  &buzzer_task_handle , 0);
-    xTaskCreatePinnedToCore(rgb_task    , "rgb_task    ", 2048, NULL, 1,  &rgb_task_handle    , 0);
-    xTaskCreatePinnedToCore(relay_task  , "rly_task    ", 2048, NULL, 1,  &relay_task_handle  , 0);
+    xTaskCreatePinnedToCore(qr_task     , "cqr_task", 4096, NULL, 1,  &qr_task_handle     , 0);
+    xTaskCreatePinnedToCore(rgb_task    , "rgb_task", 2048, NULL, 1,  &rgb_task_handle    , 0);
+    xTaskCreatePinnedToCore(relay_task  , "rly_task", 2048, NULL, 1,  &relay_task_handle  , 0);
+    xTaskCreatePinnedToCore(buzzer_task , "bzr_task", 2048, NULL, 1,  &buzzer_task_handle , 0);
 
     RGB_SIGNAL(RGB_RED, RGB_LEDS, 0);
 
@@ -63,8 +64,8 @@ static void setup()
     esp_event_loop_create_default();
     wifi_connect();
 
-    xTaskCreatePinnedToCore(data_task   , "data_task   ", 4096, NULL, 1,  &data_task_handle   , 0);
-    xTaskCreatePinnedToCore(wiegand_task, "wiegand_task", 2048, NULL, 0,  &wiegand_task_handle, 1);
+    xTaskCreatePinnedToCore(data_task   , "dat_task", 4096, NULL, 1,  &data_task_handle   , 0);
+    xTaskCreatePinnedToCore(wiegand_task, "wgn_task", 2048, NULL, 0,  &wiegand_task_handle, 1);
 }
 
 void app_main()
