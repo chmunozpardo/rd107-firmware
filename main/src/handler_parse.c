@@ -9,6 +9,8 @@ static DRAM_ATTR uint32_t read_size =    0;
 static FILE *f = NULL;
 static FILE *g = NULL;
 
+extern char screen_qr[6];
+
 static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
 {
     FILE *f           = NULL;
@@ -83,6 +85,34 @@ void IRAM_ATTR parse_cmd(void)
         if(*(cmd_reader + offset) == '\0') break;
         else ++offset;
     }
+    fclose(f);
+    remove(REG_FILE_JSON);
+
+    #ifdef DEBUG_INFO
+        gettimeofday(&now, NULL);
+        current_time = now.tv_sec + now.tv_usec/1000000.0 - current_time;
+        ESP_LOGI(TAG, "Elapsed time = %f", current_time);
+    #endif
+}
+
+void IRAM_ATTR parse_qr(void)
+{
+    f = fopen(REG_FILE_JSON, "r");
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file for reading");
+        return;
+    }
+
+    #ifdef DEBUG_INFO
+        float current_time  =   0 ;
+        struct timeval now  =  {0};
+        gettimeofday(&now, NULL);
+        current_time = now.tv_sec + now.tv_usec/1000000.0;
+    #endif
+
+    fscanf(f, " {\"estado\":\"OK\",\"data\":\"%6s\"}", screen_qr);
+    QR_SIGNAL();
     fclose(f);
     remove(REG_FILE_JSON);
 

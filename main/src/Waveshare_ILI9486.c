@@ -19,6 +19,8 @@
 extern LCD_DIS sLCD_DIS;
 
 static uint8_t qr_state = 0;
+
+static char status[6] = "123456";
 /******************************************************************************
   function: Coordinate conversion
 ******************************************************************************/
@@ -398,77 +400,6 @@ void GUI_DisNum(POINT Xpoint, POINT Ypoint, int32_t Nummber,
     GUI_DisString_EN(Xpoint, Ypoint, (const char*)pStr, Font, Color_Background, Color_Foreground );
 }
 
-
-
-/******************************************************************************
-  function: Display the bit map,1 byte = 8bit = 8 points
-  parameter:
-  Xpoint : X coordinate
-  Ypoint : Y coordinate
-  pMap   : Pointing to the picture
-  Width  : Bitmap Width
-  Height : Bitmap Height
-  note:
-  This function is suitable for bitmap, because a 16-bit data accounted for 16 points
-******************************************************************************/
-void GUI_Disbitmap(POINT Xpoint, POINT Ypoint, const unsigned char *pMap,
-                   POINT Width, POINT Height)
-{
-    POINT i, j, byteWidth = (Width + 7) / 8;
-    for (j = 0; j < Height; j++)
-    {
-        for (i = 0; i < Width; i ++)
-        {
-            if (*(pMap + j * byteWidth + i / 8) & (128 >> (i & 7)))
-            {
-                GUI_DrawPoint(Xpoint + i, Ypoint + j, WHITE, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-            }
-        }
-    }
-}
-
-/******************************************************************************
-  function: Display the Gray map,1 byte = 8bit = 2 points
-  parameter:
-  Xpoint : X coordinate
-  Ypoint : Y coordinate
-  pMap   : Pointing to the picture
-  Width  : Bitmap Width
-  Height : Bitmap Height
-  note:
-  This function is suitable for bitmap, because a 4-bit data accounted for 1 points
-  Please use the Image2lcd generated array
-******************************************************************************/
-void GUI_DisGrayMap(POINT Xpoint, POINT Ypoint, const unsigned char *pBmp)
-{
-    //Get the Map header Gray, width, height
-    char Gray;
-    Gray = *(pBmp + 1);
-    POINT Height, Width;
-    Width = (*(pBmp + 3) << 8) | (*(pBmp + 2));
-    Height = (*(pBmp + 5) << 8) | (*(pBmp + 4));
-
-    POINT i, j;
-    if (Gray == 0x04)
-    { //Sixteen gray levels
-        pBmp = pBmp + 6;
-        for (j = 0; j < Height; j++)
-        {
-            for (i = 0; i < Width / 2; i++)
-            {
-                GUI_DrawPoint(Xpoint + i * 2, Ypoint + j, ~(*pBmp >> 4), DOT_PIXEL_DFT, DOT_STYLE_DFT);
-                GUI_DrawPoint(Xpoint + i * 2 + 1, Ypoint + j, ~*pBmp , DOT_PIXEL_DFT, DOT_STYLE_DFT);
-                pBmp++;
-            }
-        }
-    }
-    else
-    {
-        //DEBUG("Does not support type\r\n");
-        return;
-    }
-}
-
 sFONT *GUI_GetFontSize(POINT Dx, POINT Dy)
 {
     sFONT *Font = NULL;
@@ -502,237 +433,66 @@ sFONT *GUI_GetFontSize(POINT Dx, POINT Dy)
     }
     return Font;
 }
-/******************************************************************************
-  function: According to the display area adaptive display time
-  parameter:
-    xStart :   X direction Start coordinates
-    Ystart :   Y direction Start coordinates
-    Xend   :   X direction end coordinates
-    Yend   :   Y direction end coordinates
-    pTime  :   Pointer to the definition of the structure
-    Color  :   Set show color
-  note:
-******************************************************************************/
 
-void GUI_Showtime(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend,
-                  DEV_TIME *pTime, COLOR Color)
+void qr_task(void *arg)
 {
-    uint8_t value[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    sFONT *Font = NULL;
-
-    //According to the display area adaptive font size
-    POINT Dx = (Xend - Xstart) / 7;//Determine the spacing between characters
-    POINT Dy = Yend - Ystart;      //determine the font size
-    Font = GUI_GetFontSize(Dx, Dy);
-
-    if ((pTime->Sec % 10) < 10 && (pTime->Sec % 10) > 0)
-    {
-        LCD_SetArealColor(Xstart + Dx * 6, Ystart, Xend, Yend, WHITE);// xx:xx:x0
-    }
-    else
-    {
-        if ((pTime->Sec / 10) < 6 && (pTime->Sec / 10) > 0)
-        {
-            LCD_SetArealColor(Xstart + Dx * 5, Ystart, Xend, Yend, WHITE);// xx:xx:00
-        }
-        else
-        {//sec = 60
-            pTime->Min = pTime->Min + 1;
-            pTime->Sec = 0;
-            if ((pTime->Min % 10) < 10 && (pTime->Min % 10) > 0)
-            {
-                LCD_SetArealColor(Xstart + Dx * 3 + Dx / 2, Ystart, Xend, Yend, WHITE);// xx:x0:00
-            }
-            else
-            {
-            if ((pTime->Min / 10) < 6 && (pTime->Min / 10) > 0) {
-              LCD_SetArealColor(Xstart + Dx * 2 + Dx / 2, Ystart, Xend, Yend, WHITE);// xx:00:00
-            }
-            else
-            {//min = 60
-                pTime->Hour =  pTime->Hour + 1;
-                pTime->Min = 0;
-                if ((pTime->Hour % 10) < 4 && (pTime->Hour % 10) > 0 && pTime->Hour < 24)
-                {// x0:00:00
-                    LCD_SetArealColor(Xstart + Dx, Ystart, Xend, Yend, WHITE);
-                }
-                else
-                {
-                    pTime->Hour = 0;
-                    pTime->Min = 0;
-                    pTime->Sec = 0;
-                    LCD_SetArealColor(Xstart, Ystart, Xend, Yend, WHITE);// 00:00:00
-                }
-            }
-            }
-        }
-    }
-
-    //Write data into the cache
-      GUI_DisChar(Xstart                           , Ystart, value[pTime->Hour / 10], Font, FONT_BACKGROUND, Color);
-      GUI_DisChar(Xstart + Dx                      , Ystart, value[pTime->Hour % 10], Font, FONT_BACKGROUND, Color);
-      GUI_DisChar(Xstart + Dx  + Dx / 4 + Dx / 2   , Ystart, ':'                    , Font, FONT_BACKGROUND, Color);
-      GUI_DisChar(Xstart + Dx * 2 + Dx / 2         , Ystart, value[pTime->Min / 10] , Font, FONT_BACKGROUND, Color);
-      GUI_DisChar(Xstart + Dx * 3 + Dx / 2         , Ystart, value[pTime->Min % 10] , Font, FONT_BACKGROUND, Color);
-      GUI_DisChar(Xstart + Dx * 4 + Dx / 2 - Dx / 4, Ystart, ':'                    , Font, FONT_BACKGROUND, Color);
-      GUI_DisChar(Xstart + Dx * 5                  , Ystart, value[pTime->Sec / 10] , Font, FONT_BACKGROUND, Color);
-      GUI_DisChar(Xstart + Dx * 6                  , Ystart, value[pTime->Sec % 10] , Font, FONT_BACKGROUND, Color);
-}
-
-/******************************************************************************
-  function: GUI_Show
-  note:
-  Clear,
-  Draw Line,
-  Draw Rectangle,
-  Draw Rings,
-  Draw Olympic Rings,
-  Display String,
-  Show Pic
-******************************************************************************/
-void GUI_Show(void)
-{
-    GUI_Clear(WHITE);
-    if (sLCD_DIS.LCD_Dis_Column > sLCD_DIS.LCD_Dis_Page)
-    { //Horizontal screen display
-
-        //DEBUG("Draw Line\r\n");
-        GUI_DrawLine(0, 10, LCD_WIDTH, 10, RED, LINE_SOLID, DOT_PIXEL_2X2);
-        GUI_DrawLine(0, 20, LCD_WIDTH, 20, RED, LINE_DOTTED, DOT_PIXEL_DFT);
-        GUI_DrawLine(0, 300, LCD_WIDTH, 300, RED, LINE_DOTTED, DOT_PIXEL_DFT);
-        GUI_DrawLine(0, 310, LCD_WIDTH, 310, RED, LINE_SOLID, DOT_PIXEL_2X2);
-
-        //DEBUG("Draw Rectangle\r\n");
-        GUI_DrawRectangle(10, 30, sLCD_DIS.LCD_Dis_Column - 10, sLCD_DIS.LCD_Dis_Page - 30, BLUE, DRAW_EMPTY, DOT_PIXEL_DFT);
-        GUI_DrawRectangle(20, 40, sLCD_DIS.LCD_Dis_Column - 20, 60, BLUE, DRAW_FULL, DOT_PIXEL_DFT);
-
-        //DEBUG("Draw Olympic Rings\r\n");
-        uint16_t Cx1 = 190, Cy1 = 240, Cr = 20;
-        uint16_t Cx2 = Cx1 + (2.5 * Cr), Cy2 = Cy1;
-        uint16_t Cx3 = Cx1 + (5 * Cr), Cy3 = Cy1;
-        uint16_t Cx4 = ( Cx1 + Cx2 ) / 2, Cy4 = Cy1 + Cr;
-        uint16_t Cx5 = ( Cx2 + Cx3 ) / 2, Cy5 = Cy1 + Cr;
-
-        GUI_DrawCircle( Cx1, Cy1, Cr, BLUE, DRAW_EMPTY, DOT_PIXEL_2X2);
-        GUI_DrawCircle( Cx2, Cy2, Cr, BLACK, DRAW_EMPTY, DOT_PIXEL_2X2);
-        GUI_DrawCircle( Cx3, Cy3, Cr, RED, DRAW_EMPTY, DOT_PIXEL_2X2);
-        GUI_DrawCircle( Cx4, Cy4, Cr, YELLOW, DRAW_EMPTY, DOT_PIXEL_2X2);
-        GUI_DrawCircle( Cx5, Cy5, Cr, GREEN, DRAW_EMPTY, DOT_PIXEL_2X2);
-
-        //DEBUG("Draw Realistic circles\r\n");
-        GUI_DrawCircle(50, 250, 30, CYAN, DRAW_FULL, DOT_PIXEL_DFT);
-        GUI_DrawCircle(sLCD_DIS.LCD_Dis_Column - 50, 250, 30, CYAN, DRAW_FULL, DOT_PIXEL_DFT);
-
-        //DEBUG("Display String\r\n");
-        GUI_DisString_EN(80, 80, "WaveShare Electronic", &Font24, LCD_BACKGROUND, BLUE);
-        GUI_DisString_EN(80, 120, "3.5inch TFTLCD", &Font20, RED, BLUE);
-
-        //DEBUG("Display Nummber\r\n");
-        GUI_DisNum(80, 150, 1234567890, &Font16, LCD_BACKGROUND, BLUE);
-
-    }
-    else
-    { //Vertical screen display
-
-        //DEBUG("Draw Line\r\n");
-        GUI_DrawLine(0, 10, sLCD_DIS.LCD_Dis_Column , 10, RED, LINE_SOLID, DOT_PIXEL_2X2);
-        GUI_DrawLine(0, 20, sLCD_DIS.LCD_Dis_Column , 20, RED, LINE_DOTTED, DOT_PIXEL_DFT);
-        GUI_DrawLine(0, sLCD_DIS.LCD_Dis_Page - 20, sLCD_DIS.LCD_Dis_Column , sLCD_DIS.LCD_Dis_Page - 20, RED, LINE_DOTTED, DOT_PIXEL_DFT);
-        GUI_DrawLine(0, sLCD_DIS.LCD_Dis_Page - 10, sLCD_DIS.LCD_Dis_Column , sLCD_DIS.LCD_Dis_Page - 10, RED, LINE_SOLID, DOT_PIXEL_2X2);
-
-        //DEBUG("Draw Rectangle\r\n");
-        GUI_DrawRectangle(10, 30, sLCD_DIS.LCD_Dis_Column - 10, sLCD_DIS.LCD_Dis_Page - 30, BLUE, DRAW_EMPTY, DOT_PIXEL_DFT);
-        GUI_DrawRectangle(20, 40, sLCD_DIS.LCD_Dis_Column - 20, 60, BLUE, DRAW_FULL, DOT_PIXEL_DFT);
-
-        //DEBUG("Draw Olympic Rings\r\n");
-        uint16_t Cx1 = 120, Cy1 = 300, Cr = 20;
-        uint16_t Cx2 = Cx1 + (2.5 * Cr), Cy2 = Cy1;
-        uint16_t Cx3 = Cx1 + (5 * Cr), Cy3 = Cy1;
-        uint16_t Cx4 = ( Cx1 + Cx2 ) / 2, Cy4 = Cy1 + Cr;
-        uint16_t Cx5 = ( Cx2 + Cx3 ) / 2, Cy5 = Cy1 + Cr;
-
-        GUI_DrawCircle( Cx1, Cy1, Cr, BLUE, DRAW_EMPTY, DOT_PIXEL_2X2);
-        GUI_DrawCircle( Cx2, Cy2, Cr, BLACK, DRAW_EMPTY, DOT_PIXEL_2X2);
-        GUI_DrawCircle( Cx3, Cy3, Cr, RED, DRAW_EMPTY, DOT_PIXEL_2X2);
-        GUI_DrawCircle( Cx4, Cy4, Cr, YELLOW, DRAW_EMPTY, DOT_PIXEL_2X2);
-        GUI_DrawCircle( Cx5, Cy5, Cr, GREEN, DRAW_EMPTY, DOT_PIXEL_2X2);
-
-        //DEBUG("Draw Realistic circles\r\n");
-        GUI_DrawCircle(50, 400, 30, CYAN, DRAW_FULL, DOT_PIXEL_DFT);
-        GUI_DrawCircle(sLCD_DIS.LCD_Dis_Column - 50, 400, 30, CYAN, DRAW_FULL, DOT_PIXEL_DFT);
-
-        //DEBUG("Display String\r\n");
-        GUI_DisString_EN(40, 120, "WaveShare Electronic", &Font24, LCD_BACKGROUND, BLUE);
-        GUI_DisString_EN(40, 180, "3.5inch TFTLCD", &Font20, RED, BLUE);
-
-        //DEBUG("Display Nummber\r\n");
-        GUI_DisNum(40, 210, 1234567890, &Font16, LCD_BACKGROUND, BLUE);
-    }
-}
-
-/******************************************************************************
-  function: GUI_Show
-  note:
-  Clear,
-  Draw Line,
-  Draw Rectangle,
-  Draw Rings,
-  Draw Olympic Rings,
-  Display String,
-  Show Pic
-******************************************************************************/
-void GUI_QR(const char *text){
     enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;  // Error correction level
 
     // Make and print the QR Code symbol
     uint8_t qrcode[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
     uint8_t tempBuffer[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
-    qrcodegen_encodeText(text, tempBuffer, qrcode, errCorLvl,
-        qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
-    int size = qrcodegen_getSize(qrcode);
+    while(1)
+    {
+        if(xQueueReceive(qr_task_queue, &status, portMAX_DELAY))
+        {
+            qrcodegen_encodeText(status, tempBuffer, qrcode, errCorLvl,
+                qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+            int size = qrcodegen_getSize(qrcode);
 
-    if(qr_state == 0)
-    {
-        for(int i = 0; i < size; i++)
-        {
-            for(int j = 0; j < size; j++)
+            if(qr_state == 0)
             {
-                if(qrcodegen_getModule(qrcode, i, j))
-                    GUI_DrawRectangle(   i*QR_SIZE + QR_OFFSET,
-                                         j*QR_SIZE + QR_OFFSET,
-                                     (i+1)*QR_SIZE + QR_OFFSET,
-                                     (j+1)*QR_SIZE + QR_OFFSET,
-                                     BLACK, DRAW_FULL, DOT_PIXEL_DFT);
-                else
-                    GUI_DrawRectangle(   i*QR_SIZE + QR_OFFSET,
-                                         j*QR_SIZE + QR_OFFSET,
-                                     (i+1)*QR_SIZE + QR_OFFSET,
-                                     (j+1)*QR_SIZE + QR_OFFSET,
-                                     WHITE, DRAW_FULL, DOT_PIXEL_DFT);
-            }
-        }
-        qr_state = 1;
-    }
-    else
-    {
-        for(int i = 0; i < size; i++)
-        {
-            for(int j = 0; j < size; j++)
-            {
-                if(!((i < 7 && j < 7) || (14 <= i && j < 7) || (14 <= j && i < 7)))
+                for(int i = 0; i < size; i++)
                 {
-                    if(qrcodegen_getModule(qrcode, i, j))
-                        GUI_DrawRectangle(   i*QR_SIZE + QR_OFFSET,
-                                             j*QR_SIZE + QR_OFFSET,
-                                         (i+1)*QR_SIZE + QR_OFFSET,
-                                         (j+1)*QR_SIZE + QR_OFFSET,
-                                         BLACK, DRAW_FULL, DOT_PIXEL_DFT);
-                    else
-                        GUI_DrawRectangle(   i*QR_SIZE + QR_OFFSET,
-                                             j*QR_SIZE + QR_OFFSET,
-                                         (i+1)*QR_SIZE + QR_OFFSET,
-                                         (j+1)*QR_SIZE + QR_OFFSET,
-                                         WHITE, DRAW_FULL, DOT_PIXEL_DFT);
+                    for(int j = 0; j < size; j++)
+                    {
+                        if(qrcodegen_getModule(qrcode, i, j))
+                            GUI_DrawRectangle(   i*QR_SIZE + QR_OFFSET,
+                                                 j*QR_SIZE + QR_OFFSET,
+                                             (i+1)*QR_SIZE + QR_OFFSET,
+                                             (j+1)*QR_SIZE + QR_OFFSET,
+                                             BLACK, DRAW_FULL, DOT_PIXEL_DFT);
+                        else
+                            GUI_DrawRectangle(   i*QR_SIZE + QR_OFFSET,
+                                                 j*QR_SIZE + QR_OFFSET,
+                                             (i+1)*QR_SIZE + QR_OFFSET,
+                                             (j+1)*QR_SIZE + QR_OFFSET,
+                                             WHITE, DRAW_FULL, DOT_PIXEL_DFT);
+                    }
+                }
+                qr_state = 1;
+            }
+            else
+            {
+                for(int i = 0; i < size; i++)
+                {
+                    for(int j = 0; j < size; j++)
+                    {
+                        if(!((i < 7 && j < 7) || (14 <= i && j < 7) || (14 <= j && i < 7)))
+                        {
+                            if(qrcodegen_getModule(qrcode, i, j))
+                                GUI_DrawRectangle(   i*QR_SIZE + QR_OFFSET,
+                                                     j*QR_SIZE + QR_OFFSET,
+                                                 (i+1)*QR_SIZE + QR_OFFSET,
+                                                 (j+1)*QR_SIZE + QR_OFFSET,
+                                                 BLACK, DRAW_FULL, DOT_PIXEL_DFT);
+                            else
+                                GUI_DrawRectangle(   i*QR_SIZE + QR_OFFSET,
+                                                     j*QR_SIZE + QR_OFFSET,
+                                                 (i+1)*QR_SIZE + QR_OFFSET,
+                                                 (j+1)*QR_SIZE + QR_OFFSET,
+                                                 WHITE, DRAW_FULL, DOT_PIXEL_DFT);
+                        }
+                    }
                 }
             }
         }

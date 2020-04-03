@@ -51,6 +51,16 @@ static DRAM_ATTR esp_http_client_config_t config_cmd =
         //.port           = 443,
     };
 
+static DRAM_ATTR esp_http_client_config_t config_qr =
+    {
+        .url            = URL_QR,
+        .event_handler  = _http_event_handle,
+        //.transport_type = HTTP_TRANSPORT_OVER_SSL,
+        .buffer_size    = HTTPS_BUFFER,
+        .buffer_size_tx = HTTPS_BUFFER,
+        //.port           = 443,
+    };
+
 static esp_err_t err;
 
 static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
@@ -107,6 +117,7 @@ void IRAM_ATTR data_task(void *arg)
         vTaskPrioritySet(rgb_task_handle    , 2);
         vTaskPrioritySet(relay_task_handle  , 2);
         vTaskPrioritySet(buzzer_task_handle , 2);
+        vTaskPrioritySet(qr_task_handle     , 2);
     }
     else
     {
@@ -146,6 +157,7 @@ void IRAM_ATTR data_task(void *arg)
                 vTaskPrioritySet(rgb_task_handle    , 2);
                 vTaskPrioritySet(relay_task_handle  , 2);
                 vTaskPrioritySet(buzzer_task_handle , 2);
+                vTaskPrioritySet(qr_task_handle     , 2);
             }
         }
 
@@ -167,6 +179,23 @@ void IRAM_ATTR data_task(void *arg)
                 esp_http_client_get_content_length(client)
                 );
             parse_cmd();
+        }
+        esp_http_client_cleanup(client);
+
+        client = esp_http_client_init(&config_qr);
+        esp_http_client_set_method(client, HTTP_METHOD_POST);
+        esp_http_client_set_post_field(client, post_data, strlen(post_data));
+
+        err = esp_http_client_perform(client);
+
+        if (err == ESP_OK)
+        {
+            ESP_LOGI(
+                TAG_HTTPS, "Status = %d, content_length = %d",
+                esp_http_client_get_status_code(client),
+                esp_http_client_get_content_length(client)
+                );
+            parse_qr();
         }
         esp_http_client_cleanup(client);
 

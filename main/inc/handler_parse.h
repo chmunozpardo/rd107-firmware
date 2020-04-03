@@ -8,6 +8,7 @@ extern "C" {
 
 void parse_data(void);
 void parse_cmd(void);
+void parse_qr(void);
 
 #ifdef __cplusplus
 }

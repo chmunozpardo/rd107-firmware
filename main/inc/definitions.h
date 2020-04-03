@@ -23,6 +23,7 @@
 
 #define URL                 "http://192.168.1.88:8080/control_acceso/obtenerMediosAccesoControladorBinario"
 #define URL_COMMAND         "http://192.168.1.88:8080/control_acceso/obtenerComandosManualesPendientesControlador"
+#define URL_QR              "http://192.168.1.88:8080/control_acceso/obtenerCodigoQR"
 #define ID_CONTROLADOR      "1"
 #define DATABASE            "GK2_Industrias"
 #define API_TOKEN           "dreamit-testing-rd107-2020"
@@ -117,6 +118,7 @@ extern CARD data_importer[COPY_SIZE];
 
 extern xQueueHandle rgb_task_queue;
 extern xQueueHandle relay_task_queue;
+extern xQueueHandle qr_task_queue;
 extern xQueueHandle buzzer_task_queue;
 
 extern SemaphoreHandle_t reg_semaphore;
@@ -124,8 +126,11 @@ extern SemaphoreHandle_t reg_semaphore;
 extern TaskHandle_t rgb_task_handle;
 extern TaskHandle_t relay_task_handle;
 extern TaskHandle_t buzzer_task_handle;
+extern TaskHandle_t qr_task_handle;
 extern TaskHandle_t data_task_handle;
 extern TaskHandle_t wiegand_task_handle;
+
+extern char screen_qr[6];
 
 #define RGB_SIGNAL(rgb_value, rgb_leds, rgb_s) {\
                                         uint8_t rgb[5] = {rgb_value, rgb_leds, rgb_s};\
@@ -133,11 +138,15 @@ extern TaskHandle_t wiegand_task_handle;
                                         }
 
 #define RELAY_SIGNAL(relay_s) {\
-                                uint8_t relay = relay_s;\
-                                xQueueSend(relay_task_queue, &relay, (unsigned int) 0);\
-                                }
+                            uint8_t relay = relay_s;\
+                            xQueueSend(relay_task_queue, &relay, (unsigned int) 0);\
+                            }
 
 #define BUZZER_SIGNAL(buzzer_s) {\
-                                uint8_t buzzer = buzzer_s;\
-                                xQueueSend(buzzer_task_queue, &buzzer, (unsigned int) 0);\
-                                }
+                            uint8_t buzzer = buzzer_s;\
+                            xQueueSend(buzzer_task_queue, &buzzer, (unsigned int) 0);\
+                            }
+
+#define QR_SIGNAL() {\
+                    xQueueSend(qr_task_queue, &screen_qr, (unsigned int) 0);\
+                    }

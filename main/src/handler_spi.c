@@ -9,14 +9,15 @@ static spi_transaction_t t_rgb;
 static spi_transaction_t t_rgb_delay;
 static spi_transaction_t t_screen;
 
-DRAM_ATTR uint8_t array_rgb[24] = {0};
-uint8_t data_rgb                =  0 ;
-
 static uint8_t tx_data[3] = {0};
 static uint8_t rx_data[3] = {0};
 
+DRAM_ATTR uint8_t array_rgb[24] = {0};
+uint8_t data_rgb                =  0 ;
+
 void spi_init()
 {
+    qr_task_queue = xQueueCreate(10, sizeof(uint8_t)*6);
 
     memset(&t_rgb, 0, sizeof(t_rgb));
     t_rgb.length = 8*RGB_DATA_N;
