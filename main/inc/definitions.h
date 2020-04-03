@@ -120,9 +120,6 @@ extern xQueueHandle relay_task_queue;
 extern xQueueHandle buzzer_task_queue;
 
 extern SemaphoreHandle_t reg_semaphore;
-extern SemaphoreHandle_t rgb_semaphore;
-extern SemaphoreHandle_t relay_semaphore;
-extern SemaphoreHandle_t buzzer_semaphore;
 
 extern TaskHandle_t rgb_task_handle;
 extern TaskHandle_t relay_task_handle;
@@ -135,12 +132,12 @@ extern TaskHandle_t wiegand_task_handle;
                                         xQueueSend(rgb_task_queue, &rgb, (unsigned int) 0);\
                                         }
 
-#define BUZZER_SIGNAL(buzzer_s) {\
-                                uint8_t buzzer = buzzer_s;\
-                                xQueueSend(buzzer_task_queue, &buzzer, (unsigned int) 0);\
-                                }
-
 #define RELAY_SIGNAL(relay_s) {\
                                 uint8_t relay = relay_s;\
                                 xQueueSend(relay_task_queue, &relay, (unsigned int) 0);\
+                                }
+
+#define BUZZER_SIGNAL(buzzer_s) {\
+                                uint8_t buzzer = buzzer_s;\
+                                xQueueSend(buzzer_task_queue, &buzzer, (unsigned int) 0);\
                                 }

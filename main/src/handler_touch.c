@@ -11,7 +11,7 @@
   | Info        :   Basic version
 
 ******************************************************************************/
-#include "SPI_LCD.h"
+#include "handler_spi.h"
 #include "handler_touch.h"
 
 extern LCD_DIS sLCD_DIS;
@@ -705,7 +705,6 @@ void TP_DrawBoard(void)
 *******************************************************************************/
 void TP_Init(LCD_SCAN_DIR Lcd_ScanDir)
 {
-    LCD_SPI();
     sTP_DEV.TP_Scan_Dir = Lcd_ScanDir;
 
     for(;;)

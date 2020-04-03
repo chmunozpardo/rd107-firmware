@@ -1,4 +1,4 @@
-#include "SPI_LCD.h"
+#include "handler_spi.h"
 #include "handler_screen.h"
 
 LCD_DIS sLCD_DIS;
@@ -231,7 +231,6 @@ function:
 void LCD_Init(LCD_SCAN_DIR LCD_ScanDir, uint16_t LCD_BLval)
 {
     //Set the initialization register
-    LCD_SPI();
     LCD_InitReg();
 
     //Set the display scan and color transfer modes
