@@ -1,5 +1,5 @@
 #include "SPI_LCD.h"
-#include "tft_handler.h"
+#include "handler_screen.h"
 
 LCD_DIS sLCD_DIS;
 

@@ -12,7 +12,7 @@
 
 ******************************************************************************/
 #include "SPI_LCD.h"
-#include "touch_handler.h"
+#include "handler_touch.h"
 
 extern LCD_DIS sLCD_DIS;
 static TP_DEV sTP_DEV;

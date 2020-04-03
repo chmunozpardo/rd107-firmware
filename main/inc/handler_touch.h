@@ -15,7 +15,7 @@
 
 #include "definitions.h"
 
-#include "tft_handler.h"
+#include "handler_screen.h"
 #include "Waveshare_ILI9486.h"
 
 #define TP_PRESS_DOWN   0x80

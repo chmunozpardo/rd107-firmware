@@ -17,8 +17,8 @@
 /****************************Upper application layer**************************/
 #pragma once
 
-#include "tft_handler.h"
 #include "fonts.h"
+#include "handler_screen.h"
 
 #define LOW_Speed_Show 0
 #define HIGH_Speed_Show 1

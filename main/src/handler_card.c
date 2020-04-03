@@ -1,7 +1,7 @@
-#include "parse_handler.h"
-#include "card_handler.h"
-#include "rgb_handler.h"
-#include "buzzer_handler.h"
+#include "handler_parse.h"
+#include "handler_card.h"
+#include "handler_rgb.h"
+#include "handler_buzzer.h"
 
 static const char *TAG = "card_handler";
 
@@ -70,12 +70,12 @@ void IRAM_ATTR card_search(uint8_t size, uint64_t value)
     if(status)
     {
         ESP_LOGI(TAG, " --> Card found <--");
-        RGB_SIGNAL(RGB_GREEN, RGB_LEDS, 1000);
+        RGB_SIGNAL(RGB_GREEN, RGB_LEDS, 1);
     }
     else
     {
         ESP_LOGI(TAG, " --> Card not found <--");
-        RGB_SIGNAL(RGB_RED, RGB_LEDS, 1000);
+        RGB_SIGNAL(RGB_RED, RGB_LEDS, 1);
     }
     RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
 

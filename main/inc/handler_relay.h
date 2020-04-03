@@ -6,7 +6,8 @@ extern "C" {
 
 #include "definitions.h"
 
-void buzzer_init(void);
+void relay_init(void);
+void relay_task(void *arg);
 
 #ifdef __cplusplus
 }

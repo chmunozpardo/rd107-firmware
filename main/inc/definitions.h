@@ -21,12 +21,12 @@
 #include "tcpip_adapter.h"
 #include "connect.h"
 
-#define URL                 "https://alpha-api.gestkontrol.cl/control_acceso/obtenerMediosAccesoControladorBinario"
-#define URL_COMMAND         "https://alpha-api.gestkontrol.cl/control_acceso/obtenerMediosAccesoControladorBinario"
-#define ID_CONTROLADOR      "16"
-#define DATABASE            "GK2_Titanium"
+#define URL                 "http://192.168.1.88:8080/control_acceso/obtenerMediosAccesoControladorBinario"
+#define URL_COMMAND         "http://192.168.1.88:8080/control_acceso/obtenerComandosManualesPendientesControlador"
+#define ID_CONTROLADOR      "1"
+#define DATABASE            "GK2_Industrias"
 #define API_TOKEN           "dreamit-testing-rd107-2020"
-#define NOMBRE_INSTANCIA    "GK2_Titanium"
+#define NOMBRE_INSTANCIA    "GK2_Industrias"
 
 #define HTTPS_BUFFER        (4096+0)
 
@@ -37,6 +37,7 @@
 #define COPY_SIZE           512
 
 #define BUZZER_GPIO         21
+#define RELAY_GPIO         22
 
 typedef struct __attribute__((packed, aligned(1))) card_structure{
     uint8_t cardType;
@@ -107,7 +108,7 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 
 #define ESP_INTR_FLAG_DEFAULT 0
 
-extern uint8_t loaded_data;
+extern uint8_t  loaded_data;
 extern uint32_t registers_size;
 extern uint64_t timestamp;
 
@@ -115,18 +116,31 @@ extern CARD registers_data[CARD_READER_SIZE];
 extern CARD data_importer[COPY_SIZE];
 
 extern xQueueHandle rgb_task_queue;
+extern xQueueHandle relay_task_queue;
+extern xQueueHandle buzzer_task_queue;
 
 extern SemaphoreHandle_t reg_semaphore;
 extern SemaphoreHandle_t rgb_semaphore;
+extern SemaphoreHandle_t relay_semaphore;
+extern SemaphoreHandle_t buzzer_semaphore;
 
 extern TaskHandle_t rgb_task_handle;
+extern TaskHandle_t relay_task_handle;
+extern TaskHandle_t buzzer_task_handle;
 extern TaskHandle_t data_task_handle;
 extern TaskHandle_t wiegand_task_handle;
 
-#define RGB_SIGNAL(rgb_value, rgb_leds, rgb_ms) {\
-                                        xSemaphoreTake(rgb_semaphore, portMAX_DELAY);\
-                                        uint8_t rgb[4] = {rgb_value, rgb_leds};\
+#define RGB_SIGNAL(rgb_value, rgb_leds, rgb_s) {\
+                                        uint8_t rgb[5] = {rgb_value, rgb_leds, rgb_s};\
                                         xQueueSend(rgb_task_queue, &rgb, (unsigned int) 0);\
-                                        if(rgb_ms > 0) vTaskDelay(rgb_ms/portTICK_PERIOD_MS);\
-                                        xSemaphoreGive(rgb_semaphore);\
                                         }
+
+#define BUZZER_SIGNAL(buzzer_s) {\
+                                uint8_t buzzer = buzzer_s;\
+                                xQueueSend(buzzer_task_queue, &buzzer, (unsigned int) 0);\
+                                }
+
+#define RELAY_SIGNAL(relay_s) {\
+                                uint8_t relay = relay_s;\
+                                xQueueSend(relay_task_queue, &relay, (unsigned int) 0);\
+                                }

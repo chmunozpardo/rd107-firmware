@@ -1,6 +1,6 @@
 #include "connect.h"
-#include "data_handler.h"
-#include "parse_handler.h"
+#include "handler_data.h"
+#include "handler_parse.h"
 
 static esp_err_t _http_event_handle(esp_http_client_event_t *evt);
 
@@ -17,6 +17,16 @@ static DRAM_ATTR const char *POST_DATA_FULL = \
                                     NOMBRE_INSTANCIA\
                                     "&lastTimestamp=";
 
+static DRAM_ATTR const char *POST_DATA_CMD = \
+                                    "id_controlador="\
+                                    ID_CONTROLADOR\
+                                    "&database="\
+                                    DATABASE\
+                                    "&api_token="\
+                                    API_TOKEN\
+                                    "&nombreInstancia="\
+                                    NOMBRE_INSTANCIA;
+
 static DRAM_ATTR char post_data[200]    = "";
 static DRAM_ATTR char lastTimestamp[20] = "0";
 
@@ -25,11 +35,23 @@ static DRAM_ATTR esp_http_client_config_t config =
     {
         .url            = URL,
         .event_handler  = _http_event_handle,
-        .transport_type = HTTP_TRANSPORT_OVER_SSL,
+        //.transport_type = HTTP_TRANSPORT_OVER_SSL,
         .buffer_size    = HTTPS_BUFFER,
         .buffer_size_tx = HTTPS_BUFFER,
-        .port           = 443,
+        //.port           = 443,
     };
+
+static DRAM_ATTR esp_http_client_config_t config_cmd =
+    {
+        .url            = URL_COMMAND,
+        .event_handler  = _http_event_handle,
+        //.transport_type = HTTP_TRANSPORT_OVER_SSL,
+        .buffer_size    = HTTPS_BUFFER,
+        .buffer_size_tx = HTTPS_BUFFER,
+        //.port           = 443,
+    };
+
+static esp_err_t err;
 
 static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 {
@@ -83,6 +105,8 @@ void IRAM_ATTR data_task(void *arg)
         RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
         vTaskPrioritySet(wiegand_task_handle, 1);
         vTaskPrioritySet(rgb_task_handle    , 2);
+        vTaskPrioritySet(relay_task_handle  , 2);
+        vTaskPrioritySet(buzzer_task_handle , 2);
     }
     else
     {
@@ -102,11 +126,11 @@ void IRAM_ATTR data_task(void *arg)
     {
         ESP_LOGI(TAG, "Last timestamp = %llu | Total registers = %u", timestamp, registers_size);
 
-        esp_http_client_handle_t client = esp_http_client_init(&config);
+        client = esp_http_client_init(&config);
         esp_http_client_set_method(client, HTTP_METHOD_POST);
         esp_http_client_set_post_field(client, post_data, strlen(post_data));
 
-        esp_err_t err = esp_http_client_perform(client);
+        err = esp_http_client_perform(client);
 
         if (err == ESP_OK)
         {
@@ -120,7 +144,29 @@ void IRAM_ATTR data_task(void *arg)
                 start_up = 1;
                 vTaskPrioritySet(wiegand_task_handle, 1);
                 vTaskPrioritySet(rgb_task_handle    , 2);
+                vTaskPrioritySet(relay_task_handle  , 2);
+                vTaskPrioritySet(buzzer_task_handle , 2);
             }
+        }
+
+        esp_http_client_cleanup(client);
+
+        strcpy(post_data, POST_DATA_CMD);
+
+        client = esp_http_client_init(&config_cmd);
+        esp_http_client_set_method(client, HTTP_METHOD_POST);
+        esp_http_client_set_post_field(client, post_data, strlen(post_data));
+
+        err = esp_http_client_perform(client);
+
+        if (err == ESP_OK)
+        {
+            ESP_LOGI(
+                TAG_HTTPS, "Status = %d, content_length = %d",
+                esp_http_client_get_status_code(client),
+                esp_http_client_get_content_length(client)
+                );
+            parse_cmd();
         }
         esp_http_client_cleanup(client);
 

@@ -1,4 +1,4 @@
-#include "parse_handler.h"
+#include "handler_parse.h"
 
 static const char* TAG = "parse_handler";
 
@@ -45,6 +45,52 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
         fclose(f);
         xSemaphoreGive(reg_semaphore);
     }
+}
+
+void IRAM_ATTR parse_cmd(void)
+{
+    f = fopen(REG_FILE_JSON, "r");
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file for reading");
+        return;
+    }
+
+    #ifdef DEBUG_INFO
+        float current_time  =   0 ;
+        struct timeval now  =  {0};
+        gettimeofday(&now, NULL);
+        current_time = now.tv_sec + now.tv_usec/1000000.0;
+    #endif
+
+    char cmd_reader[256] = "";
+    char cmd_parser[100] = "";
+    uint16_t num0 = 0;
+    uint16_t num1 = 1;
+    uint16_t num2 = 2;
+    int chars = 0;
+    int offset = 0;
+
+    fscanf(f, " {\"estado\":\"OK\",\"data\":[%[^]\n]]}", cmd_reader);
+    while(sscanf(cmd_reader + offset, " {\"id\":" "%3" SCNu16 ","
+                        "\"id_controlador\":" "%3" SCNu16 ","
+                        "\"id_usuario\":" "%3" SCNu16 ","
+                        "\"comando\":\"%[^\"]\","
+                        "\"estado\":\"En cola\"}%n", &num0, &num1, &num2, cmd_parser, &chars) > 0)
+    {
+        offset += chars;
+        RELAY_SIGNAL(1);
+        if(*(cmd_reader + offset) == '\0') break;
+        else ++offset;
+    }
+    fclose(f);
+    remove(REG_FILE_JSON);
+
+    #ifdef DEBUG_INFO
+        gettimeofday(&now, NULL);
+        current_time = now.tv_sec + now.tv_usec/1000000.0 - current_time;
+        ESP_LOGI(TAG, "Elapsed time = %f", current_time);
+    #endif
 }
 
 void IRAM_ATTR parse_data(void)

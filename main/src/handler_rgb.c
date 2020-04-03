@@ -1,4 +1,4 @@
-#include "rgb_handler.h"
+#include "handler_rgb.h"
 
 static const char* TAG = "rgb_handler";
 
@@ -7,8 +7,8 @@ static spi_device_handle_t spi;
 static spi_transaction_t t;
 static spi_transaction_t t_emp;
 
-static uint8_t data                = 0;
-static uint8_t status[4]           = {0};
+static uint8_t data                =  0 ;
+static uint8_t status[5]           = {0};
 static DRAM_ATTR uint8_t array[24] = {0};
 
 static void rgb_ws2812(uint8_t r, uint8_t g, uint8_t b)
@@ -41,7 +41,7 @@ static void rgb_fixed_leds(uint8_t r, uint8_t g, uint8_t b, uint8_t leds)
 
 void rgb_init(void)
 {
-    rgb_task_queue = xQueueCreate(10, sizeof(int)*2);
+    rgb_task_queue = xQueueCreate(10, sizeof(uint8_t)*5);
 
     memset(&t, 0, sizeof(t));
     t.length = 8*RGB_DATA_N;
@@ -87,6 +87,7 @@ void rgb_task(void *arg)
         {
             ESP_LOGI(TAG, "Setting LEDs value to [R, G, B] = [%u, %u, %u]", status[0], status[1], status[2]);
             rgb_fixed_leds(status[0], status[1], status[2], status[3]);
+            if(status[4] != 0) vTaskDelay(status[4]*1000/portTICK_PERIOD_MS);
         }
     }
 }
