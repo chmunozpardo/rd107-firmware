@@ -9,7 +9,10 @@
 #include "handler_screen.h"
 #include "handler_touch.h"
 #include "handler_spi.h"
+#include "handler_sntp.h"
 #include "Waveshare_ILI9486.h"
+
+static const char* TAG = "app_main";
 
 uint32_t registers_size = 0;
 uint64_t timestamp      = 0;
@@ -35,11 +38,25 @@ DRAM_ATTR CARD registers_data[CARD_READER_SIZE] = {0};
 
 static void setup()
 {
+    // First load filesystem
     fs_init();
+    // Remove data file
+    remove(REG_FILE);
+    remove(REG_FILE_JSON);
+    remove(REG_TIMESTAMP);
+
     rgb_init();
     spi_init();
     relay_init();
     buzzer_init();
+
+    //
+    nvs_flash_init();
+    tcpip_adapter_init();
+    esp_event_loop_create_default();
+    wifi_connect();
+
+    ntp_init();
     wiegand_init();
 
     reg_semaphore    = xSemaphoreCreateMutex();
@@ -48,21 +65,12 @@ static void setup()
     LCD_Init( Lcd_ScanDir, 200);
     LCD_Clear(WHITE);
 
-    remove(REG_FILE);
-    remove(REG_FILE_JSON);
-    remove(REG_TIMESTAMP);
-
     xTaskCreatePinnedToCore(qr_task     , "cqr_task", 4096, NULL, 1,  &qr_task_handle     , 0);
     xTaskCreatePinnedToCore(rgb_task    , "rgb_task", 2048, NULL, 1,  &rgb_task_handle    , 0);
     xTaskCreatePinnedToCore(relay_task  , "rly_task", 2048, NULL, 1,  &relay_task_handle  , 0);
     xTaskCreatePinnedToCore(buzzer_task , "bzr_task", 2048, NULL, 1,  &buzzer_task_handle , 0);
 
     RGB_SIGNAL(RGB_RED, RGB_LEDS, 0);
-
-    nvs_flash_init();
-    tcpip_adapter_init();
-    esp_event_loop_create_default();
-    wifi_connect();
 
     xTaskCreatePinnedToCore(data_task   , "dat_task", 4096, NULL, 1,  &data_task_handle   , 0);
     xTaskCreatePinnedToCore(wiegand_task, "wgn_task", 2048, NULL, 0,  &wiegand_task_handle, 1);

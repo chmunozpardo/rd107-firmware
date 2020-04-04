@@ -17,7 +17,7 @@ menu "Connection Configuration"
     if EXAMPLE_CONNECT_WIFI
         config EXAMPLE_WIFI_SSID
             string "WiFi SSID"
-            default "Movistar2,4GHZ_CC0830"
+            default "movistar2,4GHZ_CC0830"
             help
                 SSID (network name) for the example to connect to.
 

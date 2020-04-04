@@ -112,6 +112,7 @@ void IRAM_ATTR parse_qr(void)
     #endif
 
     fscanf(f, " {\"estado\":\"OK\",\"data\":\"%6s\"}", screen_qr);
+    ESP_LOGI(TAG, "QR Code = %s", screen_qr);
     QR_SIGNAL();
     fclose(f);
     remove(REG_FILE_JSON);

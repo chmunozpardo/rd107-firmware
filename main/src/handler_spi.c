@@ -95,9 +95,6 @@ void spi_init()
 
     gpio_pad_select_gpio(LCD_PIN_IRQ);
     gpio_set_direction(LCD_PIN_IRQ, GPIO_MODE_INPUT);
-
-    gpio_pad_select_gpio(LCD_PIN_BUSY);
-    gpio_set_direction(LCD_PIN_BUSY, GPIO_MODE_INPUT);
 }
 
 void rgb_spi_transmit(void)

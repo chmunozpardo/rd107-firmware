@@ -6,14 +6,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
+#include <sys/time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 #include "esp_http_client.h"
 #include "esp_spiffs.h"
 #include "esp_system.h"
 #include "esp_event.h"
+#include "esp_attr.h"
+#include "esp_sntp.h"
 #include "esp_log.h"
 #include "esp_err.h"
 
@@ -83,7 +88,6 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 
 #define LCD_PIN_DC          23
 #define LCD_PIN_IRQ         26
-#define LCD_PIN_BUSY        27
 
 #define QR_SIZE             14
 #define QR_OFFSET           (320-QR_SIZE*21)/2
@@ -105,7 +109,7 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 #define RGB_IDLE      RGB_CYAN
 
 #define WIEGAND_D0    14
-#define WIEGAND_D1    27
+#define WIEGAND_D1    17
 
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -116,18 +120,20 @@ extern uint64_t timestamp;
 extern CARD registers_data[CARD_READER_SIZE];
 extern CARD data_importer[COPY_SIZE];
 
+extern xQueueHandle qr_task_queue;
+extern xQueueHandle ntp_task_queue;
 extern xQueueHandle rgb_task_queue;
 extern xQueueHandle relay_task_queue;
-extern xQueueHandle qr_task_queue;
 extern xQueueHandle buzzer_task_queue;
 
 extern SemaphoreHandle_t reg_semaphore;
 
+extern TaskHandle_t qr_task_handle;
+extern TaskHandle_t ntp_task_handle;
 extern TaskHandle_t rgb_task_handle;
+extern TaskHandle_t data_task_handle;
 extern TaskHandle_t relay_task_handle;
 extern TaskHandle_t buzzer_task_handle;
-extern TaskHandle_t qr_task_handle;
-extern TaskHandle_t data_task_handle;
 extern TaskHandle_t wiegand_task_handle;
 
 extern char screen_qr[6];
