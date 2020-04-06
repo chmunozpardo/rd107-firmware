@@ -11,16 +11,15 @@ void LCD_WriteReg(uint8_t Reg)
 {
     gpio_set_level(LCD_PIN_DC, 0);
     gpio_set_level(LCD_PIN_CS, 0);
-    SPI4W_Write_Byte(Reg);
+    screen_write_byte(Reg);
     gpio_set_level(LCD_PIN_CS, 1);
 }
 
-void LCD_WriteData(uint8_t Data)
+void LCD_WriteData(uint16_t Data)
 {
     gpio_set_level(LCD_PIN_DC, 1);
     gpio_set_level(LCD_PIN_CS, 0);
-    SPI4W_Write_Byte(Data >> 8);
-    SPI4W_Write_Byte(Data & 0XFF);
+    screen_write_word(Data, 1);
     gpio_set_level(LCD_PIN_CS, 1);
 }
 
@@ -30,14 +29,9 @@ function:
 *******************************************************************************/
 static void LCD_Write_AllData(uint16_t Data, uint32_t DataLen)
 {
-    uint32_t i;
     gpio_set_level(LCD_PIN_DC, 1);
     gpio_set_level(LCD_PIN_CS, 0);
-    for(i = 0; i < DataLen; i++)
-    {
-        SPI4W_Write_Byte(Data >> 8);
-        SPI4W_Write_Byte(Data & 0XFF);
-    }
+    screen_write_word(Data, DataLen);
     gpio_set_level(LCD_PIN_CS, 1);
 }
 
@@ -318,12 +312,12 @@ parameter:
     Yend   :   End point coordinates
     Color  :   Set the color
 ********************************************************************************/
-void LCD_SetArealColor(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend,    COLOR Color)
+void LCD_SetArealColor(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, COLOR Color)
 {
     if((Xend > Xstart) && (Yend > Ystart))
     {
-        LCD_SetWindow(Xstart , Ystart , Xend , Yend  );
-        LCD_SetColor ( Color , Xend - Xstart, Yend - Ystart);
+        LCD_SetWindow(Xstart, Ystart, Xend, Yend);
+        LCD_SetColor (Color, Xend - Xstart, Yend - Ystart);
     }
 }
 
@@ -333,5 +327,19 @@ function:
 ********************************************************************************/
 void LCD_Clear(COLOR  Color)
 {
-    LCD_SetArealColor(0, 0, sLCD_DIS.LCD_Dis_Column , sLCD_DIS.LCD_Dis_Page , Color);
+    LCD_SetArealColor(0, 0, sLCD_DIS.LCD_Dis_Column, sLCD_DIS.LCD_Dis_Page, Color);
+}
+
+void lcd_draw_rectangle(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, COLOR Color)
+{
+    LCD_WriteReg(0x2A);
+    LCD_WriteData(Xstart);
+    LCD_WriteData(Xend - 1);
+
+    LCD_WriteReg(0x2B);
+    LCD_WriteData(Ystart);
+    LCD_WriteData(Yend - 1);
+
+    LCD_WriteReg(0x2C);
+    LCD_Write_AllData(Color , (uint32_t)(Xend - Xstart) * (uint32_t)(Yend - Ystart));
 }

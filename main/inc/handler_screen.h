@@ -72,7 +72,7 @@ void LCD_Init(LCD_SCAN_DIR LCD_ScanDir, uint16_t LCD_BLval);
 void LCD_SetGramScanWay(LCD_SCAN_DIR Scan_dir);
 
 void LCD_WriteReg(uint8_t Reg);
-void LCD_WriteData(uint8_t Data);
+void LCD_WriteData(uint16_t Data);
 
 void LCD_SetWindow(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend);
 void LCD_SetCursor(POINT Xpoint, POINT Ypoint);

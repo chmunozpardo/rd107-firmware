@@ -7,10 +7,13 @@ static spi_device_handle_t spi_rgb;
 static spi_device_handle_t spi_screen;
 static spi_transaction_t t_rgb;
 static spi_transaction_t t_rgb_delay;
-static spi_transaction_t t_screen;
+static spi_transaction_t t_screen_8b;
+static spi_transaction_t t_screen_16b;
 
-static uint8_t tx_data[3] = {0};
-static uint8_t rx_data[3] = {0};
+static uint8_t tx_data_8b[3] = {0};
+static uint8_t rx_data_8b[3] = {0};
+
+DRAM_ATTR uint16_t tx_data_16b[SCREEN_BUFFER] = {0xFFFF};
 
 DRAM_ATTR uint8_t array_rgb[24] = {0};
 uint8_t data_rgb                =  0 ;
@@ -20,7 +23,7 @@ void spi_init()
     qr_task_queue = xQueueCreate(10, sizeof(uint8_t)*6);
 
     memset(&t_rgb, 0, sizeof(t_rgb));
-    t_rgb.length = 8*RGB_DATA_N;
+    t_rgb.length = 8 * RGB_DATA_N;
     t_rgb.tx_buffer = &array_rgb;
     t_rgb.user = (void*)0;
 
@@ -54,11 +57,16 @@ void spi_init()
     ret = spi_bus_add_device(VSPI_HOST, &devcfg_rgb, &spi_rgb);
     ESP_ERROR_CHECK(ret);
 
-    memset(&t_screen, 0, sizeof(t_screen));
-    t_screen.length = 8 * 3;
-    t_screen.user = (void*)0;
-    t_screen.tx_buffer = tx_data;
-    t_screen.rx_buffer = rx_data;
+    memset(&t_screen_8b, 0, sizeof(t_screen_8b));
+    t_screen_8b.length = 8 * 3;
+    t_screen_8b.user = (void*)0;
+    t_screen_8b.tx_buffer = tx_data_8b;
+    t_screen_8b.rx_buffer = rx_data_8b;
+
+    memset(&t_screen_16b, 0, sizeof(t_screen_16b));
+    t_screen_16b.length = SCREEN_BUFFER * 16;
+    t_screen_16b.user = (void*)0;
+    t_screen_16b.tx_buffer = tx_data_16b;
 
     spi_bus_config_t buscfg_screen=
     {
@@ -67,7 +75,7 @@ void spi_init()
         .sclk_io_num = LCD_PIN_CLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = 1,
+        .max_transfer_sz = 0,
     };
 
     spi_device_interface_config_t devcfg_screen=
@@ -75,7 +83,7 @@ void spi_init()
         .clock_speed_hz = LCD_FREQ,
         .mode = 0,
         .spics_io_num = -1,
-        .queue_size = 1,
+        .queue_size = 40,
     };
 
     ESP_LOGI(TAG, "Initializing SPI for TOUCH");
@@ -110,11 +118,27 @@ void rgb_spi_delay(void)
     }
 }
 
-void SPI4W_Write_Byte(uint8_t Data)
+void screen_write_byte(uint8_t Data)
 {
-    t_screen.length = 8 * 1;
-    tx_data[0] = Data;
-    ret = spi_device_polling_transmit(spi_screen, &t_screen);
+    t_screen_8b.length = 8;
+    tx_data_8b[0] = Data;
+    ret = spi_device_polling_transmit(spi_screen, &t_screen_8b);
+}
+
+void screen_write_word(uint16_t Data, uint32_t DataLen)
+{
+    uint32_t i, j;
+    uint32_t rem = DataLen % SCREEN_BUFFER;
+    uint32_t mul = DataLen / SCREEN_BUFFER;
+    for(j = 0; j < mul; j++)
+    {
+        for(i = 0; i < SCREEN_BUFFER; i++) tx_data_16b[i] = SPI_SWAP_DATA_TX(Data, 16);
+        t_screen_16b.length = 16 * SCREEN_BUFFER;
+        ret = spi_device_polling_transmit(spi_screen, &t_screen_16b);
+    }
+    for(i = 0; i < rem; i++) tx_data_16b[i] = SPI_SWAP_DATA_TX(Data, 16);
+    t_screen_16b.length = 16 * rem;
+    ret = spi_device_polling_transmit(spi_screen, &t_screen_16b);
 }
 
 uint16_t SPI4W_Read_Byte(uint8_t Data)
@@ -122,19 +146,19 @@ uint16_t SPI4W_Read_Byte(uint8_t Data)
     uint8_t a0 = 0;
     uint8_t a1 = 0;
 
-    t_screen.length = 8 * 1;
+    t_screen_8b.length = 8 * 1;
 
     gpio_set_level(LCD_PIN_CS, 0);
-    tx_data[0] = Data;
-    ret = spi_device_polling_transmit(spi_screen, &t_screen);
+    tx_data_8b[0] = Data;
+    ret = spi_device_polling_transmit(spi_screen, &t_screen_8b);
 
-    tx_data[0] = 0xFF;
-    ret = spi_device_polling_transmit(spi_screen, &t_screen);
-    a0 = rx_data[0];
+    tx_data_8b[0] = 0xFF;
+    ret = spi_device_polling_transmit(spi_screen, &t_screen_8b);
+    a0 = rx_data_8b[0];
 
-    tx_data[0] = 0xFF;
-    ret = spi_device_polling_transmit(spi_screen, &t_screen);
-    a1 = rx_data[0];
+    tx_data_8b[0] = 0xFF;
+    ret = spi_device_polling_transmit(spi_screen, &t_screen_8b);
+    a1 = rx_data_8b[0];
     gpio_set_level(LCD_PIN_CS, 1);
     uint16_t out = (a0 << 5) | (a1 >> 3);
     return out;

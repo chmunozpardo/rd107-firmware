@@ -91,6 +91,7 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 
 #define QR_SIZE             14
 #define QR_OFFSET           (320-QR_SIZE*21)/2
+#define SCREEN_BUFFER       32
 
 // WS2812 parameters
 #define RGB_LEDS        14  // Number of pixels

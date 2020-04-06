@@ -111,9 +111,14 @@ void IRAM_ATTR parse_qr(void)
         current_time = now.tv_sec + now.tv_usec/1000000.0;
     #endif
 
-    fscanf(f, " {\"estado\":\"OK\",\"data\":\"%6s\"}", screen_qr);
-    ESP_LOGI(TAG, "QR Code = %s", screen_qr);
-    QR_SIGNAL();
+    char qr_placeholder[6] = "";
+    fscanf(f, " {\"estado\":\"OK\",\"data\":\"%6s\"}", qr_placeholder);
+    ESP_LOGI(TAG, "QR Code = %s", qr_placeholder);
+    if(strcmp(screen_qr, qr_placeholder) != 0)
+    {
+        strcpy(screen_qr, qr_placeholder);
+        QR_SIGNAL();
+    }
     fclose(f);
     remove(REG_FILE_JSON);
 

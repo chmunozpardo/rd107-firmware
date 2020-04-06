@@ -17,17 +17,17 @@ static const char* TAG = "app_main";
 uint32_t registers_size = 0;
 uint64_t timestamp      = 0;
 
-char screen_qr[6] = "123456";
+char screen_qr[6] = "000000";
 
+xQueueHandle qr_task_queue     = NULL;
 xQueueHandle rgb_task_queue    = NULL;
 xQueueHandle relay_task_queue  = NULL;
-xQueueHandle qr_task_queue = NULL;
 xQueueHandle buzzer_task_queue = NULL;
 
+TaskHandle_t qr_task_handle      = NULL;
 TaskHandle_t rgb_task_handle     = NULL;
 TaskHandle_t relay_task_handle   = NULL;
 TaskHandle_t buzzer_task_handle  = NULL;
-TaskHandle_t qr_task_handle  = NULL;
 TaskHandle_t data_task_handle    = NULL;
 TaskHandle_t wiegand_task_handle = NULL;
 
