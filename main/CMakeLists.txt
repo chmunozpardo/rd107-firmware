@@ -1,12 +1,12 @@
 idf_component_register(SRCS
                     "app_main.c" 
-                    "src/connect.c"
                     "src/qrcodegen.c"
                     "src/handler_rgb.c"
                     "src/handler_spi.c"
                     "src/handler_card.c"
                     "src/handler_data.c"
                     "src/handler_sntp.c"
+                    "src/handler_wifi.c"
                     "src/handler_files.c"
                     "src/handler_parse.c"
                     "src/handler_relay.c"

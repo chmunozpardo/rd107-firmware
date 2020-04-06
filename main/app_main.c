@@ -10,6 +10,7 @@
 #include "handler_touch.h"
 #include "handler_spi.h"
 #include "handler_sntp.h"
+#include "handler_wifi.h"
 #include "Waveshare_ILI9486.h"
 
 static const char* TAG = "app_main";
@@ -39,6 +40,7 @@ DRAM_ATTR CARD registers_data[CARD_READER_SIZE] = {0};
 static void setup()
 {
     // First load filesystem
+    esp_task_wdt_deinit();
     fs_init();
     // Remove data file
     remove(REG_FILE);
@@ -50,14 +52,13 @@ static void setup()
     relay_init();
     buzzer_init();
 
-    //
-    nvs_flash_init();
-    tcpip_adapter_init();
-    esp_event_loop_create_default();
-    wifi_connect();
-
+    wifi_init();
     ntp_init();
     wiegand_init();
+
+    esp_task_wdt_init(CONFIG_ESP_TASK_WDT_TIMEOUT_MS, false);
+    esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(0));
+    esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(1));
 
     reg_semaphore    = xSemaphoreCreateMutex();
 

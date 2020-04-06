@@ -10,8 +10,10 @@
 #include <sys/time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 #include "freertos/event_groups.h"
 #include "driver/gpio.h"
+#include "driver/uart.h"
 #include "driver/spi_master.h"
 #include "esp_http_client.h"
 #include "esp_spiffs.h"
@@ -19,12 +21,17 @@
 #include "esp_event.h"
 #include "esp_attr.h"
 #include "esp_sntp.h"
+#include "esp_wifi.h"
 #include "esp_log.h"
 #include "esp_err.h"
+#include "esp_task_wdt.h"
+#include "esp_int_wdt.h"
+#include "lwip/err.h"
+#include "lwip/sys.h"
+#include "soc/uart_struct.h"
 
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
-#include "connect.h"
 
 #define URL                 "http://192.168.1.88:8080/control_acceso/obtenerMediosAccesoControladorBinario"
 #define URL_COMMAND         "http://192.168.1.88:8080/control_acceso/obtenerComandosManualesPendientesControlador"
@@ -43,7 +50,7 @@
 #define COPY_SIZE           512
 
 #define BUZZER_GPIO         21
-#define RELAY_GPIO         22
+#define RELAY_GPIO          22
 
 typedef struct __attribute__((packed, aligned(1))) card_structure{
     uint8_t cardType;
@@ -112,7 +119,9 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 #define WIEGAND_D0    14
 #define WIEGAND_D1    17
 
-#define ESP_INTR_FLAG_DEFAULT 0
+#define ESP_INTR_FLAG_DEFAULT          0
+#define CONFIG_ESP_TASK_WDT_TIMEOUT_MS 5
+#define DEFAULT_SCAN_LIST_SIZE         20
 
 extern uint8_t  loaded_data;
 extern uint32_t registers_size;
