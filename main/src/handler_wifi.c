@@ -11,12 +11,16 @@ static uint16_t ap_count = 0;
 static uint16_t number = DEFAULT_SCAN_LIST_SIZE;
 static wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
 
+ip4_str ip_addr = {0};
+ip4_str gw_addr = {0};
+uint8_t mac[6]  = {0};
+
 static void on_got_ip(void *arg, esp_event_base_t event_base,
                       int32_t event_id, void *event_data)
 {
     ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-    memcpy(&s_ip_addr, &event->ip_info.ip, sizeof(s_ip_addr));
-    memcpy(&s_gw_addr, &event->ip_info.gw, sizeof(s_gw_addr));
+    memcpy(&ip_addr.ip_addr_i, &event->ip_info.ip, sizeof(ip4_addr_t));
+    memcpy(&gw_addr.ip_addr_i, &event->ip_info.gw, sizeof(ip4_addr_t));
     xEventGroupSetBits(s_connect_event_group, GOT_IPV4_BIT);
 }
 

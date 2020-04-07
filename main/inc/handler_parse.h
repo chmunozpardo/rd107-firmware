@@ -6,9 +6,10 @@ extern "C" {
 
 #include "definitions.h"
 
-void parse_data(void);
-void parse_cmd(void);
 void parse_qr(void);
+void parse_data(void);
+void parse_command(void);
+void parse_register(void);
 
 #ifdef __cplusplus
 }

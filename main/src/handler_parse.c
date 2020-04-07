@@ -9,8 +9,6 @@ static DRAM_ATTR uint32_t read_size =    0;
 static FILE *f = NULL;
 static FILE *g = NULL;
 
-extern char screen_qr[6];
-
 static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
 {
     FILE *f           = NULL;
@@ -49,7 +47,7 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
     }
 }
 
-void IRAM_ATTR parse_cmd(void)
+void IRAM_ATTR parse_command(void)
 {
     f = fopen(REG_FILE_JSON, "r");
     if (f == NULL)
@@ -57,13 +55,6 @@ void IRAM_ATTR parse_cmd(void)
         ESP_LOGE(TAG, "Failed to open file for reading");
         return;
     }
-
-    #ifdef DEBUG_INFO
-        float current_time  =   0 ;
-        struct timeval now  =  {0};
-        gettimeofday(&now, NULL);
-        current_time = now.tv_sec + now.tv_usec/1000000.0;
-    #endif
 
     char cmd_reader[256] = "";
     char cmd_parser[100] = "";
@@ -87,12 +78,32 @@ void IRAM_ATTR parse_cmd(void)
     }
     fclose(f);
     remove(REG_FILE_JSON);
+}
 
-    #ifdef DEBUG_INFO
-        gettimeofday(&now, NULL);
-        current_time = now.tv_sec + now.tv_usec/1000000.0 - current_time;
-        ESP_LOGI(TAG, "Elapsed time = %f", current_time);
-    #endif
+void parse_register(void)
+{
+    f = fopen(REG_FILE_JSON, "r");
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file for reading");
+        return;
+    }
+
+    char cmd_reader[256] = "";
+    char cmd_parser[100] = "";
+    uint16_t num0 = 0;
+    uint16_t num1 = 1;
+    uint16_t num2 = 2;
+    int chars = 0;
+    int offset = 0;
+
+    fscanf(f, " {\"apitoken\":\"%[^,\"]\",\"base_datos\":\"%[^,\"]\",\"idDevice\":%[^,\"],\"estado\":\"OK\"}",
+        apitoken,
+        database,
+        idcontrolador
+        );
+    fclose(f);
+    remove(REG_FILE_JSON);
 }
 
 void IRAM_ATTR parse_qr(void)
@@ -104,13 +115,6 @@ void IRAM_ATTR parse_qr(void)
         return;
     }
 
-    #ifdef DEBUG_INFO
-        float current_time  =   0 ;
-        struct timeval now  =  {0};
-        gettimeofday(&now, NULL);
-        current_time = now.tv_sec + now.tv_usec/1000000.0;
-    #endif
-
     char qr_placeholder[6] = "";
     fscanf(f, " {\"estado\":\"OK\",\"data\":\"%6s\"}", qr_placeholder);
     ESP_LOGI(TAG, "QR Code = %s", qr_placeholder);
@@ -121,12 +125,6 @@ void IRAM_ATTR parse_qr(void)
     }
     fclose(f);
     remove(REG_FILE_JSON);
-
-    #ifdef DEBUG_INFO
-        gettimeofday(&now, NULL);
-        current_time = now.tv_sec + now.tv_usec/1000000.0 - current_time;
-        ESP_LOGI(TAG, "Elapsed time = %f", current_time);
-    #endif
 }
 
 void IRAM_ATTR parse_data(void)
@@ -137,13 +135,6 @@ void IRAM_ATTR parse_data(void)
         ESP_LOGE(TAG, "Failed to open file for reading");
         return;
     }
-
-    #ifdef DEBUG_INFO
-        float current_time  =   0 ;
-        struct timeval now  =  {0};
-        gettimeofday(&now, NULL);
-        current_time = now.tv_sec + now.tv_usec/1000000.0;
-    #endif
 
     fscanf(f, " {\"data\":{\"countData\":%d,\"accessRecords\":", &new_regs);
 
@@ -197,10 +188,4 @@ void IRAM_ATTR parse_data(void)
     fclose(g);
     fclose(f);
     remove(REG_FILE_JSON);
-
-    #ifdef DEBUG_INFO
-        gettimeofday(&now, NULL);
-        current_time = now.tv_sec + now.tv_usec/1000000.0 - current_time;
-        ESP_LOGI(TAG, "Elapsed time = %f", current_time);
-    #endif
 }

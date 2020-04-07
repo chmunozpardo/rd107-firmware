@@ -18,10 +18,6 @@ static const char* TAG = "app_main";
 uint32_t registers_size = 0;
 uint64_t timestamp      = 0;
 
-ip4_addr_t s_ip_addr = {0};
-ip4_addr_t s_gw_addr = {0};
-uint8_t mac[6]      = {0};
-
 char screen_qr[6] = "000000";
 
 xQueueHandle qr_task_queue     = NULL;
@@ -40,62 +36,6 @@ SemaphoreHandle_t reg_semaphore = NULL;
 
 DRAM_ATTR CARD data_importer[COPY_SIZE]         = {0};
 DRAM_ATTR CARD registers_data[CARD_READER_SIZE] = {0};
-
-static void register_device()
-{
-    ESP_LOGI(TAG, "Input the registration code:");
-    uint8_t i;
-    uint8_t state = 0;
-    char in_opt[7] = "";
-    while(1)
-    {
-        i = 0;
-        state = 0;
-        memset(in_opt, 0, 7);
-        while(1)
-        {
-            char ch;
-            ch = fgetc(stdin);
-            if(ch != 0xFF)
-            {
-                fputc(ch, stdout);
-                if (ch=='\n')
-                {
-                    break;
-                }
-                else
-                {
-                    in_opt[i] = ch;
-                    ++i;
-                    if(i >= 6)
-                    {
-                        fputc('\n', stdout);
-                        break;
-                    }
-                }
-            }
-        }
-        for(int j = 0; j < i; j++)
-        {
-            if(!isdigit(in_opt[j]))
-            {
-                printf("Not digit = %c\n", in_opt[j]);
-                state = 1;
-                break;
-            }
-        }
-        if(state == 1)
-        {
-            ESP_LOGI(TAG, "Try again");
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    data_register(in_opt, mac, s_ip_addr.addr, s_gw_addr.addr);
-}
 
 static void setup()
 {
@@ -130,19 +70,7 @@ static void setup()
     ntp_init();
 
     // Register device
-    esp_read_mac(mac, 0);
-    printf("MAC = ");
-    for(int i = 0; i < 6; i++) printf("%x:", mac[i]);
-    printf("\n");
-
-    printf("IP  = ");
-    for(int i = 0; i < 4; i++) printf("%u", (uint8_t)(s_ip_addr.addr >> i*8));
-    printf("\n");
-
-    printf("GW  = ");
-    for(int i = 0; i < 4; i++) printf("%u", (uint8_t)(s_gw_addr.addr >> i*8));
-    printf("\n");
-    register_device();
+    data_register();
 
     // --------------------------------------------
     // Enable Watchdog after all the configurations

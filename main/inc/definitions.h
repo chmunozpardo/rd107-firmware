@@ -36,6 +36,11 @@
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
 
+#define RD_MODELO           "RD-107"
+#define RD_VERSION          "0.1"
+#define RD_SERIE            "cmunoz"
+#define RD_CANALES          "1"
+
 #define URL                 "http://192.168.1.88:8080/control_acceso/obtenerMediosAccesoControladorBinario"
 #define URL_COMMAND         "http://192.168.1.88:8080/control_acceso/obtenerComandosManualesPendientesControlador"
 #define URL_QR              "http://192.168.1.88:8080/control_acceso/obtenerCodigoQR"
@@ -45,6 +50,7 @@
 #define DATABASE            "GK2_Industrias"
 #define API_TOKEN           "dreamit-testing-rd107-2020"
 #define NOMBRE_INSTANCIA    "GK2_Industrias"
+
 
 #define HTTPS_BUFFER        (4096+0)
 
@@ -128,8 +134,22 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 #define CONFIG_ESP_TASK_WDT_TIMEOUT_MS 5
 #define DEFAULT_SCAN_LIST_SIZE         20
 
-extern ip4_addr_t s_ip_addr;
-extern ip4_addr_t s_gw_addr;
+typedef union ip4_str
+{
+    ip4_addr_t ip_addr_i;
+    struct
+    {
+        uint8_t addr[4];
+    };
+} ip4_str;
+
+extern char apitoken[30];
+extern char database[20];
+extern char idcontrolador[3];
+
+extern ip4_str ip_addr;
+extern ip4_str gw_addr;
+extern uint8_t mac[6];
 
 extern uint8_t  loaded_data;
 extern uint32_t registers_size;
