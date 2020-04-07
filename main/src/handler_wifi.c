@@ -6,17 +6,17 @@
 static const char *TAG = "wifi_handler";
 
 static EventGroupHandle_t s_connect_event_group;
-static ip4_addr_t s_ip_addr;
 
+static uint16_t ap_count = 0;
 static uint16_t number = DEFAULT_SCAN_LIST_SIZE;
 static wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
-static uint16_t ap_count = 0;
 
 static void on_got_ip(void *arg, esp_event_base_t event_base,
                       int32_t event_id, void *event_data)
 {
     ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
     memcpy(&s_ip_addr, &event->ip_info.ip, sizeof(s_ip_addr));
+    memcpy(&s_gw_addr, &event->ip_info.gw, sizeof(s_gw_addr));
     xEventGroupSetBits(s_connect_event_group, GOT_IPV4_BIT);
 }
 
@@ -62,12 +62,12 @@ static uint8_t enter_opt()
         if(i == 1 && isdigit(in_opt[0]))
         {
             i = atoi(in_opt);
-            if(0 <= i && i < (ap_count+1)) break;
+            if(i < (ap_count+1)) break;
         }
         else if(i == 2 && isdigit(in_opt[0]) && isdigit(in_opt[1]))
         {
             i = atoi(in_opt);
-            if(0 <= i && i < (ap_count+1)) break;
+            if(i < (ap_count+1)) break;
         }
         ESP_LOGI(TAG, "Try again");
     }

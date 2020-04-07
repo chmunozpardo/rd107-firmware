@@ -26,8 +26,11 @@
 #include "esp_err.h"
 #include "esp_task_wdt.h"
 #include "esp_int_wdt.h"
-#include "lwip/err.h"
-#include "lwip/sys.h"
+
+#include "lwip/inet.h"
+#include "lwip/ip4_addr.h"
+#include "lwip/dns.h"
+
 #include "soc/uart_struct.h"
 
 #include "nvs_flash.h"
@@ -36,6 +39,8 @@
 #define URL                 "http://192.168.1.88:8080/control_acceso/obtenerMediosAccesoControladorBinario"
 #define URL_COMMAND         "http://192.168.1.88:8080/control_acceso/obtenerComandosManualesPendientesControlador"
 #define URL_QR              "http://192.168.1.88:8080/control_acceso/obtenerCodigoQR"
+#define URL_REG             "http://192.168.1.88:8080/androidFullAccess/register"
+
 #define ID_CONTROLADOR      "1"
 #define DATABASE            "GK2_Industrias"
 #define API_TOKEN           "dreamit-testing-rd107-2020"
@@ -122,6 +127,9 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 #define ESP_INTR_FLAG_DEFAULT          0
 #define CONFIG_ESP_TASK_WDT_TIMEOUT_MS 5
 #define DEFAULT_SCAN_LIST_SIZE         20
+
+extern ip4_addr_t s_ip_addr;
+extern ip4_addr_t s_gw_addr;
 
 extern uint8_t  loaded_data;
 extern uint32_t registers_size;

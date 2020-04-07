@@ -26,6 +26,13 @@ static DRAM_ATTR const char *POST_DATA_CMD = \
                                     "&nombreInstancia="\
                                     NOMBRE_INSTANCIA;
 
+static DRAM_ATTR const char *POST_DATA_REG = \
+                                    "modelo=RD-107"\
+                                    "&version=0.1"\
+                                    "&serie=cmunoz"\
+                                    "&cantidadCanales=1"\
+                                    "&code=";
+
 static DRAM_ATTR char post_data[200]    = "";
 static DRAM_ATTR char lastTimestamp[20] = "0";
 
@@ -81,6 +88,7 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
             break;
         case HTTP_EVENT_ON_DATA:
             ESP_LOGI(TAG_HTTPS, "DATA, len=%d", evt->data_len);
+            printf("%.*s", evt->data_len, (char*)evt->data);
             FILE *f;
             f = fopen(REG_FILE_JSON, "a+");
             if (f == NULL)
@@ -96,6 +104,71 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
             break;
     }
     return ESP_OK;
+}
+
+void data_register(char *code, uint8_t *mac, uint32_t ip, uint32_t gw)
+{
+    strcpy(post_data, POST_DATA_REG);
+    strcat(post_data, code);
+
+    char tmp_str[24] = "";
+
+    memset(tmp_str, 0, 24);
+    sprintf(tmp_str,"%x:%x:%x:%x:%x:%x",
+            mac[0],
+            mac[1],
+            mac[2],
+            mac[3],
+            mac[4],
+            mac[5]);
+    strcat(post_data, "&mac=");
+    strcat(post_data, tmp_str);
+
+    memset(tmp_str, 0, 24);
+    sprintf(tmp_str,"%u.%u.%u.%u",
+            (uint8_t) (ip >>  0),
+            (uint8_t) (ip >>  8),
+            (uint8_t) (ip >> 16),
+            (uint8_t) (ip >> 24));
+    strcat(post_data, "&ip=");
+    strcat(post_data, tmp_str);
+
+    memset(tmp_str, 0, 24);
+    sprintf(tmp_str,"%u.%u.%u.%u",
+            (uint8_t) (gw >>  0),
+            (uint8_t) (gw >>  8),
+            (uint8_t) (gw >> 16),
+            (uint8_t) (gw >> 24));
+    strcat(post_data, "&gateway=");
+    strcat(post_data, tmp_str);
+
+    printf("Post data = %s\n", post_data);
+
+    esp_http_client_config_t config_reg =
+    {
+        .url            = URL_REG,
+        .event_handler  = _http_event_handle,
+        //.transport_type = HTTP_TRANSPORT_OVER_SSL,
+        .buffer_size    = HTTPS_BUFFER,
+        .buffer_size_tx = HTTPS_BUFFER,
+        //.port           = 443,
+    };
+    client = esp_http_client_init(&config_reg);
+    esp_http_client_set_method(client, HTTP_METHOD_POST);
+    esp_http_client_set_post_field(client, post_data, strlen(post_data));
+
+    err = esp_http_client_perform(client);
+
+    if (err == ESP_OK)
+    {
+        ESP_LOGI(
+            TAG_HTTPS, "Status = %d, content_length = %d",
+            esp_http_client_get_status_code(client),
+            esp_http_client_get_content_length(client)
+            );
+        parse_cmd();
+    }
+    esp_http_client_cleanup(client);
 }
 
 void IRAM_ATTR data_task(void *arg)

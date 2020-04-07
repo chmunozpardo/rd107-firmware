@@ -40,6 +40,7 @@ void rgb_init(void)
 
 void rgb_task(void *arg)
 {
+    rgb_fixed_leds(0xFF, 0, 0, RGB_LEDS);
     while(1)
     {
         if(xQueueReceive(rgb_task_queue, &status, portMAX_DELAY))
