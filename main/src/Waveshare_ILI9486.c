@@ -33,14 +33,6 @@ void GUI_Swop(POINT Point1, POINT Point2)
 }
 
 /******************************************************************************
-  function: Coordinate conversion
-******************************************************************************/
-void GUI_Clear(COLOR Color)
-{
-    LCD_Clear(Color);
-}
-
-/******************************************************************************
   function: Draw Point(Xpoint, Ypoint) Fill the color
   parameter:
   Xpoint    :   The x coordinate of the point

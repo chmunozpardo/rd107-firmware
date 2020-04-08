@@ -89,14 +89,6 @@ void parse_register(void)
         return;
     }
 
-    char cmd_reader[256] = "";
-    char cmd_parser[100] = "";
-    uint16_t num0 = 0;
-    uint16_t num1 = 1;
-    uint16_t num2 = 2;
-    int chars = 0;
-    int offset = 0;
-
     fscanf(f, " {\"apitoken\":\"%[^,\"]\",\"base_datos\":\"%[^,\"]\",\"idDevice\":%[^,\"],\"estado\":\"OK\"}",
         apitoken,
         database,
@@ -176,6 +168,7 @@ void IRAM_ATTR parse_data(void)
     }
     else
     {
+        RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
         ESP_LOGI(TAG, "No new registers");
     }
 

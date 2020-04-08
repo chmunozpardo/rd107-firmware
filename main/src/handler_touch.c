@@ -271,7 +271,7 @@ void TP_Adjust(void)
   uint32_t Sqrt1, Sqrt2;
   float Dsqrt;
 
-  LCD_Clear(LCD_BACKGROUND);
+  screen_clear(LCD_BACKGROUND);
   GUI_DisString_EN(0, 60, "Please use the stylus click the cross"\
                    "on the screen. The cross will always move until"\
                    "the screen adjustment is completed.",
@@ -502,11 +502,11 @@ void TP_Adjust(void)
 
           //6.Calibration is successful
           //DEBUG("Adjust OK\r\n");
-          LCD_Clear(LCD_BACKGROUND);
+          screen_clear(LCD_BACKGROUND);
           GUI_DisString_EN(35, 110, "Touch Screen Adjust OK!",
                            &Font16 , FONT_BACKGROUND , RED);
           vTaskDelay(1000/portTICK_PERIOD_MS);
-          LCD_Clear(LCD_BACKGROUND);
+          screen_clear(LCD_BACKGROUND);
           return;
         //Exception handling,Reset  Initial value
         default :
@@ -551,7 +551,7 @@ void TP_GetAdFac(void)
     sTP_DEV.iXoff = 517L ;
     sTP_DEV.iYoff = -20L ;
   } else {
-    LCD_Clear(LCD_BACKGROUND);
+    screen_clear(LCD_BACKGROUND);
     GUI_DisString_EN(0, 60, "Does not support touch-screen \
                         calibration in this direction",
                      &Font16, FONT_BACKGROUND, RED);
@@ -564,7 +564,7 @@ void TP_GetAdFac(void)
 *******************************************************************************/
 void TP_Dialog(void)
 {
-  LCD_Clear(LCD_BACKGROUND);
+  screen_clear(LCD_BACKGROUND);
   //DEBUG("Drawing...\r\n");
   //Horizontal screen display
   if (sLCD_DIS.LCD_Dis_Column > sLCD_DIS.LCD_Dis_Page) {

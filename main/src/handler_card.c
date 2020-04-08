@@ -12,13 +12,6 @@ static FILE *f                      = NULL;
 
 void IRAM_ATTR card_search(uint8_t size, uint64_t value)
 {
-    #ifdef DEBUG_INFO
-        struct timeval now;
-        float current_time =  0;
-        gettimeofday(&now, NULL);
-        current_time = now.tv_sec + now.tv_usec/1000000.0;
-    #endif
-
     if(size == 26)
     {
         inputCard.cardType = 2;
@@ -60,12 +53,6 @@ void IRAM_ATTR card_search(uint8_t size, uint64_t value)
 
     fclose(f);
     xSemaphoreGive(reg_semaphore);
-
-    #ifdef DEBUG_INFO
-        gettimeofday(&now, NULL);
-        current_time = now.tv_sec + now.tv_usec/1000000.0 - current_time;
-        ESP_LOGI(TAG, "Elapsed time = %f", current_time);
-    #endif
 
     if(status)
     {

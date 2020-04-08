@@ -5,144 +5,112 @@ LCD_DIS sLCD_DIS;
 
 /*******************************************************************************
 function:
-        Write register address and data
-*******************************************************************************/
-void LCD_WriteReg(uint8_t Reg)
-{
-    gpio_set_level(LCD_PIN_DC, 0);
-    gpio_set_level(LCD_PIN_CS, 0);
-    screen_write_byte(Reg);
-    gpio_set_level(LCD_PIN_CS, 1);
-}
-
-void LCD_WriteData(uint16_t Data)
-{
-    gpio_set_level(LCD_PIN_DC, 1);
-    gpio_set_level(LCD_PIN_CS, 0);
-    screen_write_word(Data, 1);
-    gpio_set_level(LCD_PIN_CS, 1);
-}
-
-/*******************************************************************************
-function:
-        Write register data
-*******************************************************************************/
-static void LCD_Write_AllData(uint16_t Data, uint32_t DataLen)
-{
-    gpio_set_level(LCD_PIN_DC, 1);
-    gpio_set_level(LCD_PIN_CS, 0);
-    screen_write_word(Data, DataLen);
-    gpio_set_level(LCD_PIN_CS, 1);
-}
-
-/*******************************************************************************
-function:
         Common register initialization
 *******************************************************************************/
-static void LCD_InitReg(void)
+static void screen_init_reg(void)
 {
-    LCD_WriteReg(0XF9);
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x08);
+    screen_write_byte(0XF9);
+    screen_write_word(0x00, 1);
+    screen_write_word(0x08, 1);
 
-    LCD_WriteReg(0xC0);
-    LCD_WriteData(0x19);//VREG1OUT POSITIVE
-    LCD_WriteData(0x1a);//VREG2OUT NEGATIVE
+    screen_write_byte(0xC0);
+    screen_write_word(0x19, 1);//VREG1OUT POSITIVE
+    screen_write_word(0x1a, 1);//VREG2OUT NEGATIVE
 
-    LCD_WriteReg(0xC1);
-    LCD_WriteData(0x45);//VGH,VGL    VGH>=14V.
-    LCD_WriteData(0x00);
+    screen_write_byte(0xC1);
+    screen_write_word(0x45, 1);//VGH,VGL    VGH>=14V.
+    screen_write_word(0x00, 1);
 
-    LCD_WriteReg(0xC2);    //Normal mode, increase can change the display quality, while increasing power consumption
-    LCD_WriteData(0x33);
+    screen_write_byte(0xC2);//Normal mode, increase can change the display quality, while increasing power consumption
+    screen_write_word(0x33, 1);
 
-    LCD_WriteReg(0XC5);
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x28);//VCM_REG[7:0]. <=0X80.
+    screen_write_byte(0XC5);
+    screen_write_word(0x00, 1);
+    screen_write_word(0x28, 1);//VCM_REG[7:0]. <=0X80.
 
-    LCD_WriteReg(0xB1);//Sets the frame frequency of full color normal mode
-    LCD_WriteData(0xA0);//0XB0 =70HZ, <=0XB0.0xA0=62HZ
-    LCD_WriteData(0x11);
+    screen_write_byte(0xB1);//Sets the frame frequency of full color normal mode
+    screen_write_word(0xA0, 1);//0XB0 =70HZ, <=0XB0.0xA0=62HZ
+    screen_write_word(0x11, 1);
 
-    LCD_WriteReg(0xB4);
-    LCD_WriteData(0x02); //2 DOT FRAME MODE,F<=70HZ.
+    screen_write_byte(0xB4);
+    screen_write_word(0x02, 1); //2 DOT FRAME MODE,F<=70HZ.
 
-    LCD_WriteReg(0xB6);//
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x42);//0 GS SS SM ISC[3:0];
-    LCD_WriteData(0x3B);
+    screen_write_byte(0xB6);//
+    screen_write_word(0x00, 1);
+    screen_write_word(0x42, 1);//0 GS SS SM ISC[3:0];
+    screen_write_word(0x3B, 1);
 
-    LCD_WriteReg(0xB7);
-    LCD_WriteData(0x07);
+    screen_write_byte(0xB7);
+    screen_write_word(0x07, 1);
 
-    LCD_WriteReg(0xE0);
-    LCD_WriteData(0x1F);
-    LCD_WriteData(0x25);
-    LCD_WriteData(0x22);
-    LCD_WriteData(0x0B);
-    LCD_WriteData(0x06);
-    LCD_WriteData(0x0A);
-    LCD_WriteData(0x4E);
-    LCD_WriteData(0xC6);
-    LCD_WriteData(0x39);
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x00);
+    screen_write_byte(0xE0);
+    screen_write_word(0x1F, 1);
+    screen_write_word(0x25, 1);
+    screen_write_word(0x22, 1);
+    screen_write_word(0x0B, 1);
+    screen_write_word(0x06, 1);
+    screen_write_word(0x0A, 1);
+    screen_write_word(0x4E, 1);
+    screen_write_word(0xC6, 1);
+    screen_write_word(0x39, 1);
+    screen_write_word(0x00, 1);
+    screen_write_word(0x00, 1);
+    screen_write_word(0x00, 1);
+    screen_write_word(0x00, 1);
+    screen_write_word(0x00, 1);
+    screen_write_word(0x00, 1);
 
-    LCD_WriteReg(0XE1);
-    LCD_WriteData(0x1F);
-    LCD_WriteData(0x3F);
-    LCD_WriteData(0x3F);
-    LCD_WriteData(0x0F);
-    LCD_WriteData(0x1F);
-    LCD_WriteData(0x0F);
-    LCD_WriteData(0x46);
-    LCD_WriteData(0x49);
-    LCD_WriteData(0x31);
-    LCD_WriteData(0x05);
-    LCD_WriteData(0x09);
-    LCD_WriteData(0x03);
-    LCD_WriteData(0x1C);
-    LCD_WriteData(0x1A);
-    LCD_WriteData(0x00);
+    screen_write_byte(0XE1);
+    screen_write_word(0x1F, 1);
+    screen_write_word(0x3F, 1);
+    screen_write_word(0x3F, 1);
+    screen_write_word(0x0F, 1);
+    screen_write_word(0x1F, 1);
+    screen_write_word(0x0F, 1);
+    screen_write_word(0x46, 1);
+    screen_write_word(0x49, 1);
+    screen_write_word(0x31, 1);
+    screen_write_word(0x05, 1);
+    screen_write_word(0x09, 1);
+    screen_write_word(0x03, 1);
+    screen_write_word(0x1C, 1);
+    screen_write_word(0x1A, 1);
+    screen_write_word(0x00, 1);
 
-    LCD_WriteReg(0XF1);
-    LCD_WriteData(0x36);
-    LCD_WriteData(0x04);
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x3C);
-    LCD_WriteData(0x0F);
-    LCD_WriteData(0x0F);
-    LCD_WriteData(0xA4);
-    LCD_WriteData(0x02);
+    screen_write_byte(0XF1);
+    screen_write_word(0x36, 1);
+    screen_write_word(0x04, 1);
+    screen_write_word(0x00, 1);
+    screen_write_word(0x3C, 1);
+    screen_write_word(0x0F, 1);
+    screen_write_word(0x0F, 1);
+    screen_write_word(0xA4, 1);
+    screen_write_word(0x02, 1);
 
-    LCD_WriteReg(0XF2);
-    LCD_WriteData(0x18);
-    LCD_WriteData(0xA3);
-    LCD_WriteData(0x12);
-    LCD_WriteData(0x02);
-    LCD_WriteData(0x32);
-    LCD_WriteData(0x12);
-    LCD_WriteData(0xFF);
-    LCD_WriteData(0x32);
-    LCD_WriteData(0x00);
+    screen_write_byte(0XF2);
+    screen_write_word(0x18, 1);
+    screen_write_word(0xA3, 1);
+    screen_write_word(0x12, 1);
+    screen_write_word(0x02, 1);
+    screen_write_word(0x32, 1);
+    screen_write_word(0x12, 1);
+    screen_write_word(0xFF, 1);
+    screen_write_word(0x32, 1);
+    screen_write_word(0x00, 1);
 
-    LCD_WriteReg(0XF4);
-    LCD_WriteData(0x40);
-    LCD_WriteData(0x00);
-    LCD_WriteData(0x08);
-    LCD_WriteData(0x91);
-    LCD_WriteData(0x04);
+    screen_write_byte(0XF4);
+    screen_write_word(0x40, 1);
+    screen_write_word(0x00, 1);
+    screen_write_word(0x08, 1);
+    screen_write_word(0x91, 1);
+    screen_write_word(0x04, 1);
 
-    LCD_WriteReg(0XF8);
-    LCD_WriteData(0x21);
-    LCD_WriteData(0x04);
+    screen_write_byte(0XF8);
+    screen_write_word(0x21, 1);
+    screen_write_word(0x04, 1);
 
-    LCD_WriteReg(0X3A);    //Set Interface Pixel Format
-    LCD_WriteData(0x55);
+    screen_write_byte(0X3A);//Set Interface Pixel Format
+    screen_write_word(0x55, 1);
 
 }
 
@@ -152,7 +120,7 @@ parameter:
         Scan_dir   :   Scan direction
         Colorchose :   RGB or GBR color format
 ********************************************************************************/
-void LCD_SetGramScanWay(LCD_SCAN_DIR Scan_dir)
+void screen_gram_scan(LCD_SCAN_DIR Scan_dir)
 {
     uint16_t MemoryAccessReg_Data = 0; //addr:0x36
     uint16_t DisFunReg_Data = 0; //addr:0xB6
@@ -210,33 +178,35 @@ void LCD_SetGramScanWay(LCD_SCAN_DIR Scan_dir)
     }
 
     // Set the read / write scan direction of the frame memory
-    LCD_WriteReg(0xB6);
-    LCD_WriteData(0X00);
-    LCD_WriteData(DisFunReg_Data);
+    screen_write_byte(0xB6);
+    screen_write_word(0X00, 1);
+    screen_write_word(DisFunReg_Data, 1);
 
-    LCD_WriteReg(0x36);
-    LCD_WriteData(MemoryAccessReg_Data);
+    screen_write_byte(0x36);
+    screen_write_word(MemoryAccessReg_Data, 1);
 }
 
 /********************************************************************************
 function:
     initialization
 ********************************************************************************/
-void LCD_Init(LCD_SCAN_DIR LCD_ScanDir, uint16_t LCD_BLval)
+void screen_init()
 {
     //Set the initialization register
-    LCD_InitReg();
+    screen_init_reg();
 
     //Set the display scan and color transfer modes
-    LCD_SetGramScanWay( LCD_ScanDir);
+    screen_gram_scan(SCAN_DIR_DFT);
     vTaskDelay(200/portTICK_PERIOD_MS);
 
     //sleep out
-    LCD_WriteReg(0x11);
+    screen_write_byte(0x11);
     vTaskDelay(120/portTICK_PERIOD_MS);
 
     //Turn on the LCD display
-    LCD_WriteReg(0x29);
+    screen_write_byte(0x29);
+
+    screen_clear(WHITE);
 }
 
 /********************************************************************************
@@ -250,19 +220,19 @@ parameter:
 void LCD_SetWindow(POINT Xstart, POINT Ystart,    POINT Xend, POINT Yend)
 {
     //set the X coordinates
-    LCD_WriteReg(0x2A);
-    LCD_WriteData(Xstart >> 8);        //Set the horizontal starting point to the high octet
-    LCD_WriteData(Xstart & 0xff);      //Set the horizontal starting point to the low octet
-    LCD_WriteData((Xend - 1) >> 8);    //Set the horizontal end to the high octet
-    LCD_WriteData((Xend - 1) & 0xff);  //Set the horizontal end to the low octet
+    screen_write_byte(0x2A);
+    screen_write_word(Xstart >> 8, 1);        //Set the horizontal starting point to the high octet
+    screen_write_word(Xstart & 0xff, 1);      //Set the horizontal starting point to the low octet
+    screen_write_word((Xend - 1) >> 8, 1);    //Set the horizontal end to the high octet
+    screen_write_word((Xend - 1) & 0xff, 1);  //Set the horizontal end to the low octet
 
     //set the Y coordinates
-    LCD_WriteReg(0x2B);
-    LCD_WriteData(Ystart >> 8);
-    LCD_WriteData(Ystart & 0xff );
-    LCD_WriteData((Yend - 1) >> 8);
-    LCD_WriteData((Yend - 1) & 0xff);
-    LCD_WriteReg(0x2C);
+    screen_write_byte(0x2B);
+    screen_write_word(Ystart >> 8, 1);
+    screen_write_word(Ystart & 0xff, 1);
+    screen_write_word((Yend - 1) >> 8, 1);
+    screen_write_word((Yend - 1) & 0xff, 1);
+    screen_write_byte(0x2C);
 }
 
 /********************************************************************************
@@ -284,7 +254,7 @@ parameter:
 //static void LCD_SetColor(LENGTH Dis_Width, LENGTH Dis_Height, COLOR Color ){
 void LCD_SetColor(COLOR Color , POINT Xpoint, POINT Ypoint)
 {
-    LCD_Write_AllData(Color , (uint32_t)Xpoint * (uint32_t)Ypoint);
+    screen_write_word(Color , (uint32_t)Xpoint * (uint32_t)Ypoint);
 }
 
 /********************************************************************************
@@ -325,21 +295,21 @@ void LCD_SetArealColor(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, COLOR
 function:
             Clear screen
 ********************************************************************************/
-void LCD_Clear(COLOR  Color)
+void screen_clear(COLOR  Color)
 {
     LCD_SetArealColor(0, 0, sLCD_DIS.LCD_Dis_Column, sLCD_DIS.LCD_Dis_Page, Color);
 }
 
 void lcd_draw_rectangle(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, COLOR Color)
 {
-    LCD_WriteReg(0x2A);
-    LCD_WriteData(Xstart);
-    LCD_WriteData(Xend - 1);
+    screen_write_byte(0x2A);
+    screen_write_word(Xstart, 1);
+    screen_write_word(Xend - 1, 1);
 
-    LCD_WriteReg(0x2B);
-    LCD_WriteData(Ystart);
-    LCD_WriteData(Yend - 1);
+    screen_write_byte(0x2B);
+    screen_write_word(Ystart, 1);
+    screen_write_word(Yend - 1, 1);
 
-    LCD_WriteReg(0x2C);
-    LCD_Write_AllData(Color , (uint32_t)(Xend - Xstart) * (uint32_t)(Yend - Ystart));
+    screen_write_byte(0x2C);
+    screen_write_word(Color , (uint32_t)(Xend - Xstart) * (uint32_t)(Yend - Ystart));
 }

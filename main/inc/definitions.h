@@ -1,7 +1,5 @@
 #pragma once
 
-//#define DEBUG_INFO
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -44,13 +42,7 @@
 #define URL                 "http://192.168.1.88:8080/control_acceso/obtenerMediosAccesoControladorBinario"
 #define URL_COMMAND         "http://192.168.1.88:8080/control_acceso/obtenerComandosManualesPendientesControlador"
 #define URL_QR              "http://192.168.1.88:8080/control_acceso/obtenerCodigoQR"
-#define URL_REG             "http://192.168.1.88:8080/androidFullAccess/register"
-
-#define ID_CONTROLADOR      "1"
-#define DATABASE            "GK2_Industrias"
-#define API_TOKEN           "dreamit-testing-rd107-2020"
-#define NOMBRE_INSTANCIA    "GK2_Industrias"
-
+#define URL_REG             "http://192.168.1.88:8080/control_acceso/registrarControlador"
 
 #define HTTPS_BUFFER        (4096+0)
 
@@ -109,7 +101,7 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 
 #define QR_SIZE             14
 #define QR_OFFSET           (320-QR_SIZE*21)/2
-#define SCREEN_BUFFER       32
+#define SCREEN_BUFFER       1024
 
 // WS2812 parameters
 #define RGB_LEDS        14  // Number of pixels
@@ -124,6 +116,27 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 #define RGB_MAGENTA 181,   0, 181
 #define RGB_YELLOW  181, 181,   0
 #define RGB_WHITE   147, 147, 147
+
+// Screen default values
+#define LCD_BACKGROUND  WHITE //Default background color
+#define FONT_BACKGROUND WHITE //Default font background color
+#define FONT_FOREGROUND GRED  //Default font foreground color
+
+// Screen colors
+#define WHITE   0xFFFF
+#define BLACK   0x0000
+#define BLUE    0x001F
+#define BRED    0XF81F
+#define GRED    0XFFE0
+#define GBLUE   0X07FF
+#define RED     0xF800
+#define MAGENTA 0xF81F
+#define GREEN   0x07E0
+#define CYAN    0x7FFF
+#define YELLOW  0xFFE0
+#define BROWN   0XBC40
+#define BRRED   0XFC07
+#define GRAY    0X8430
 
 #define RGB_IDLE      RGB_CYAN
 

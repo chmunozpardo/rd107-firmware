@@ -48,22 +48,17 @@ static void setup()
     // First load filesystem
     fs_init();
 
-    // Remove data file
+    // Remove data files
     remove(REG_FILE);
     remove(REG_FILE_JSON);
     remove(REG_TIMESTAMP);
 
     // Initiate all peripherals
-    rgb_init();
     spi_init();
     relay_init();
     buzzer_init();
+    screen_init();
     wiegand_init();
-
-    //
-    LCD_SCAN_DIR Lcd_ScanDir = SCAN_DIR_DFT;
-    LCD_Init( Lcd_ScanDir, 200);
-    LCD_Clear(WHITE);
 
     // Initiate WiFi configurations
     wifi_init();
@@ -83,7 +78,7 @@ static void setup()
     xTaskCreatePinnedToCore(rgb_task    , "rgb_task", 2048, NULL, 1,  &rgb_task_handle    , 0);
     xTaskCreatePinnedToCore(relay_task  , "rly_task", 2048, NULL, 1,  &relay_task_handle  , 0);
     xTaskCreatePinnedToCore(buzzer_task , "bzr_task", 2048, NULL, 1,  &buzzer_task_handle , 0);
-    xTaskCreatePinnedToCore(data_task   , "dat_task", 4096, NULL, 1,  &data_task_handle   , 0);
+    xTaskCreatePinnedToCore(data_task   , "dat_task", 4096, NULL, 1,  &data_task_handle   , 1);
     xTaskCreatePinnedToCore(wiegand_task, "wgn_task", 2048, NULL, 0,  &wiegand_task_handle, 1);
 }
 

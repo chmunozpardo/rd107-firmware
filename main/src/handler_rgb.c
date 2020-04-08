@@ -33,11 +33,6 @@ static void rgb_fixed_leds(uint8_t r, uint8_t g, uint8_t b, uint8_t leds)
     rgb_spi_delay();
 }
 
-void rgb_init(void)
-{
-    rgb_task_queue = xQueueCreate(10, sizeof(uint8_t)*5);
-}
-
 void rgb_task(void *arg)
 {
     rgb_fixed_leds(0xFF, 0, 0, RGB_LEDS);
