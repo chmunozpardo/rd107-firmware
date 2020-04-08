@@ -4,7 +4,7 @@
 static esp_err_t _http_event_handle(esp_http_client_event_t *evt);
 
 static const char *TAG            = "data_handler";
-static const char *TAG_HTTPS      = "https_handler";
+static const char *TAG_HTTPS      = "http_handler";
 
 DRAM_ATTR char apitoken[30]     = {0};
 DRAM_ATTR char database[20]     = {0};
@@ -94,14 +94,23 @@ void data_register()
             if(ch != 0xFF)
             {
                 fputc(ch, stdout);
+                if(ch == '\b'){
+                    fprintf(stdout, "\033[K");
+                }
                 if (ch=='\n')
                 {
                     break;
                 }
+                else if(ch=='\b')
+                {
+                    if(i > 0)
+                    {
+                        code[--i] = 0;
+                    }
+                }
                 else
                 {
-                    code[i] = ch;
-                    ++i;
+                    code[i++] = ch;
                     if(i > 6)
                     {
                         fputc('\n', stdout);
@@ -110,14 +119,21 @@ void data_register()
                 }
             }
         }
-        for(int j = 0; j < i; j++)
+        if(i > 0)
         {
-            if(!isdigit(code[j]))
+            for(int j = 0; j < i; j++)
             {
-                printf("Not digit = %c\n", code[j]);
-                state = 1;
-                break;
+                if(!isdigit(code[j]))
+                {
+                    printf("Not digit = %c\n", code[j]);
+                    state = 1;
+                    break;
+                }
             }
+        }
+        else
+        {
+            state = 1;
         }
         if(state == 1)
         {

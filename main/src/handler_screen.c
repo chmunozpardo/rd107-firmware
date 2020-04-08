@@ -14,30 +14,30 @@ static void screen_init_reg(void)
     screen_write_word(0x08, 1);
 
     screen_write_byte(0xC0);
-    screen_write_word(0x19, 1);//VREG1OUT POSITIVE
-    screen_write_word(0x1a, 1);//VREG2OUT NEGATIVE
+    screen_write_word(0x19, 1);
+    screen_write_word(0x1a, 1);
 
     screen_write_byte(0xC1);
-    screen_write_word(0x45, 1);//VGH,VGL    VGH>=14V.
+    screen_write_word(0x45, 1);
     screen_write_word(0x00, 1);
 
-    screen_write_byte(0xC2);//Normal mode, increase can change the display quality, while increasing power consumption
+    screen_write_byte(0xC2);
     screen_write_word(0x33, 1);
 
     screen_write_byte(0XC5);
     screen_write_word(0x00, 1);
-    screen_write_word(0x28, 1);//VCM_REG[7:0]. <=0X80.
+    screen_write_word(0x28, 1);
 
-    screen_write_byte(0xB1);//Sets the frame frequency of full color normal mode
-    screen_write_word(0xA0, 1);//0XB0 =70HZ, <=0XB0.0xA0=62HZ
+    screen_write_byte(0xB1);
+    screen_write_word(0xA0, 1);
     screen_write_word(0x11, 1);
 
     screen_write_byte(0xB4);
-    screen_write_word(0x02, 1); //2 DOT FRAME MODE,F<=70HZ.
+    screen_write_word(0x02, 1);
 
-    screen_write_byte(0xB6);//
+    screen_write_byte(0xB6);
     screen_write_word(0x00, 1);
-    screen_write_word(0x42, 1);//0 GS SS SM ISC[3:0];
+    screen_write_word(0x42, 1);
     screen_write_word(0x3B, 1);
 
     screen_write_byte(0xB7);
@@ -109,7 +109,7 @@ static void screen_init_reg(void)
     screen_write_word(0x21, 1);
     screen_write_word(0x04, 1);
 
-    screen_write_byte(0X3A);//Set Interface Pixel Format
+    screen_write_byte(0X3A);
     screen_write_word(0x55, 1);
 
 }

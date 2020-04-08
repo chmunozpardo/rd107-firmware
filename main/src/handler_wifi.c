@@ -31,12 +31,6 @@ static void on_wifi_disconnect(void *arg, esp_event_base_t event_base,
     ESP_ERROR_CHECK(esp_wifi_connect());
 }
 
-static void on_wifi_connect(void *arg, esp_event_base_t event_base,
-                            int32_t event_id, void *event_data)
-{
-    tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA);
-}
-
 static uint8_t enter_opt()
 {
     uint8_t i;
@@ -51,9 +45,19 @@ static uint8_t enter_opt()
             if(ch != 0xFF)
             {
                 fputc(ch, stdout);
-                if (ch=='\n')
+                if(ch == '\b'){
+                    fprintf(stdout, "\033[K");
+                }
+                if (ch == '\n')
                 {
                     break;
+                }
+                else if(ch == '\b')
+                {
+                    if(i > 0)
+                    {
+                        in_opt[--i] = 0;
+                    }
                 }
                 else
                 {
@@ -93,9 +97,19 @@ static void enter_password(char *in_opt)
             if(ch != 0xFF)
             {
                 fputc(ch, stdout);
-                if (ch=='\n')
+                if(ch == '\b'){
+                    fprintf(stdout, "\033[K");
+                }
+                if (ch == '\n')
                 {
                     break;
+                }
+                else if(ch == '\b')
+                {
+                    if(i > 0)
+                    {
+                        in_opt[--i] = 0;
+                    }
                 }
                 else
                 {
@@ -105,14 +119,21 @@ static void enter_password(char *in_opt)
                 }
             }
         }
-        for(int j = 0; j < i; j++)
+        if(i > 0)
         {
-            if(!isalnum(in_opt[j]))
+            for(int j = 0; j < i; j++)
             {
-                printf("Not alpha = %c\n", in_opt[j]);
-                state = 1;
-                break;
+                if(!isalnum(in_opt[j]))
+                {
+                    printf("Not alpha = %c\n", in_opt[j]);
+                    state = 1;
+                    break;
+                }
             }
+        }
+        else
+        {
+            state = 1;
         }
         if(state == 1)
         {

@@ -65,5 +65,4 @@ void IRAM_ATTR card_search(uint8_t size, uint64_t value)
         RGB_SIGNAL(RGB_RED, RGB_LEDS, 1);
     }
     RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
-
 }
