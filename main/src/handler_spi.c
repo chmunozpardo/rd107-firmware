@@ -24,60 +24,62 @@ void spi_init()
     rgb_task_queue = xQueueCreate(10, sizeof(uint8_t)*5);
 
     memset(&t_rgb, 0, sizeof(t_rgb));
-    t_rgb.length = 8 * RGB_DATA_N;
+    t_rgb.length    = 8 * RGB_DATA_N;
     t_rgb.tx_buffer = &array_rgb;
-    t_rgb.user = (void*)0;
+    t_rgb.user      = (void*)0;
 
     memset(&t_rgb_delay, 0, sizeof(t_rgb_delay));
-    t_rgb_delay.length = 8;
+    t_rgb_delay.length    = 8;
     t_rgb_delay.tx_buffer = &data_rgb;
-    t_rgb_delay.user = (void*)0;
+    t_rgb_delay.user      = (void*)0;
 
     memset(&t_screen_8b, 0, sizeof(t_screen_8b));
-    t_screen_8b.length = 8 * 3;
-    t_screen_8b.user = (void*)0;
+    t_screen_8b.length    = 8 * 3;
+    t_screen_8b.rxlength  = 8 * 3;
+    t_screen_8b.user      = (void*)0;
     t_screen_8b.tx_buffer = tx_data_8b;
     t_screen_8b.rx_buffer = rx_data_8b;
 
     memset(&t_screen_16b, 0, sizeof(t_screen_16b));
-    t_screen_16b.length = SCREEN_BUFFER * 16;
-    t_screen_16b.user = (void*)0;
+    t_screen_16b.length    = SCREEN_BUFFER * 16;
+    t_screen_16b.rxlength  = 0;
+    t_screen_16b.user      = (void*)0;
     t_screen_16b.tx_buffer = tx_data_16b;
 
     spi_bus_config_t buscfg_rgb=
     {
-        .miso_io_num = -1,
-        .mosi_io_num = PIN_NUM_MOSI,
-        .sclk_io_num = -1,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
+        .miso_io_num     = -1,
+        .mosi_io_num     = PIN_NUM_MOSI,
+        .sclk_io_num     = -1,
+        .quadwp_io_num   = -1,
+        .quadhd_io_num   = -1,
         .max_transfer_sz = RGB_DATA_N*RGB_LEDS
     };
 
     spi_device_interface_config_t devcfg_rgb=
     {
         .clock_speed_hz = 6400000,
-        .mode = 0,
-        .spics_io_num = -1,
-        .queue_size = 40,
+        .mode           = 0,
+        .spics_io_num   = -1,
+        .queue_size     = 40,
     };
 
     spi_bus_config_t buscfg_screen=
     {
-        .miso_io_num = LCD_PIN_MISO,
-        .mosi_io_num = LCD_PIN_MOSI,
-        .sclk_io_num = LCD_PIN_CLK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
+        .miso_io_num     = LCD_PIN_MISO,
+        .mosi_io_num     = LCD_PIN_MOSI,
+        .sclk_io_num     = LCD_PIN_CLK,
+        .quadwp_io_num   = -1,
+        .quadhd_io_num   = -1,
         .max_transfer_sz = 0,
     };
 
     spi_device_interface_config_t devcfg_screen=
     {
         .clock_speed_hz = LCD_FREQ,
-        .mode = 0,
-        .spics_io_num = -1,
-        .queue_size = 40,
+        .mode           = 0,
+        .spics_io_num   = -1,
+        .queue_size     = 40,
     };
 
     ESP_LOGI(TAG, "Initializing SPI for RGB");
@@ -121,7 +123,8 @@ void rgb_spi_delay(void)
 
 void screen_write_byte(uint8_t Data)
 {
-    t_screen_8b.length = 8;
+    t_screen_8b.length   = 8;
+    t_screen_8b.rxlength = 0;
     tx_data_8b[0] = Data;
     gpio_set_level(LCD_PIN_DC, 0);
     gpio_set_level(LCD_PIN_CS, 0);
@@ -139,11 +142,11 @@ void screen_write_word(uint16_t Data, uint32_t DataLen)
     for(j = 0; j < mul; j++)
     {
         for(i = 0; i < SCREEN_BUFFER; i++) tx_data_16b[i] = SPI_SWAP_DATA_TX(Data, 16);
-        t_screen_16b.length = 16 * SCREEN_BUFFER;
+        t_screen_16b.length   = 16 * SCREEN_BUFFER;
         ret = spi_device_polling_transmit(spi_screen, &t_screen_16b);
     }
     for(i = 0; i < rem; i++) tx_data_16b[i] = SPI_SWAP_DATA_TX(Data, 16);
-    t_screen_16b.length = 16 * rem;
+    t_screen_16b.length   = 16 * rem;
     ret = spi_device_polling_transmit(spi_screen, &t_screen_16b);
     gpio_set_level(LCD_PIN_CS, 1);
 }
@@ -153,7 +156,8 @@ uint16_t SPI4W_Read_Byte(uint8_t Data)
     uint8_t a0 = 0;
     uint8_t a1 = 0;
 
-    t_screen_8b.length = 8 * 1;
+    t_screen_8b.length   = 8 * 1;
+    t_screen_8b.rxlength = 8 * 1;
 
     gpio_set_level(LCD_PIN_CS, 0);
     tx_data_8b[0] = Data;

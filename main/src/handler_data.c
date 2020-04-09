@@ -1,10 +1,13 @@
 #include "handler_data.h"
 #include "handler_parse.h"
+#include "handler_search.h"
 
 static esp_err_t _http_event_handle(esp_http_client_event_t *evt);
 
 static const char *TAG            = "data_handler";
 static const char *TAG_HTTPS      = "http_handler";
+
+static esp_err_t err;
 
 DRAM_ATTR char apitoken[30]     = {0};
 DRAM_ATTR char database[20]     = {0};
@@ -14,39 +17,8 @@ static DRAM_ATTR char post_data[256]    = "";
 static DRAM_ATTR char lastTimestamp[20] = "0";
 
 static DRAM_ATTR esp_http_client_handle_t client;
-static DRAM_ATTR esp_http_client_config_t config =
-    {
-        .url            = URL,
-        .event_handler  = _http_event_handle,
-        .buffer_size    = HTTPS_BUFFER,
-        .buffer_size_tx = HTTPS_BUFFER,
-    };
 
-static DRAM_ATTR esp_http_client_config_t config_reservations =
-    {
-        .url            = URL_RESERVATIONS,
-        .event_handler  = _http_event_handle,
-        .buffer_size    = HTTPS_BUFFER,
-        .buffer_size_tx = HTTPS_BUFFER,
-    };
-
-static DRAM_ATTR esp_http_client_config_t config_cmd =
-    {
-        .url            = URL_COMMAND,
-        .event_handler  = _http_event_handle,
-        .buffer_size    = HTTPS_BUFFER,
-        .buffer_size_tx = HTTPS_BUFFER,
-    };
-
-static DRAM_ATTR esp_http_client_config_t config_qr =
-    {
-        .url            = URL_QR,
-        .event_handler  = _http_event_handle,
-        .buffer_size    = HTTPS_BUFFER,
-        .buffer_size_tx = HTTPS_BUFFER,
-    };
-
-static esp_err_t err;
+static void (*func_pointer)(void);
 
 static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 {
@@ -59,24 +31,23 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
             ESP_LOGI(TAG_HTTPS, "CONNECTED");
             break;
         case HTTP_EVENT_HEADER_SENT:
-            ESP_LOGI(TAG_HTTPS, "HEADER_SENT");
+            //ESP_LOGI(TAG_HTTPS, "HEADER_SENT");
             break;
         case HTTP_EVENT_ON_HEADER:
-            ESP_LOGI(TAG_HTTPS, "HEADER");
+            //ESP_LOGI(TAG_HTTPS, "HEADER");
             printf("%.*s", evt->data_len, (char*)evt->data);
             break;
         case HTTP_EVENT_ON_DATA:
             ESP_LOGI(TAG_HTTPS, "DATA, len=%d", evt->data_len);
-            printf("%.*s\n", evt->data_len, (char*)evt->data);
             FILE *f;
-            f = fopen(REG_FILE_JSON, "a+");
+            f = fopen(FILE_JSON, "a+");
             if (f == NULL)
                 break;
             fwrite((char*)evt->data, 1, evt->data_len, f);
             fclose(f);
             break;
         case HTTP_EVENT_ON_FINISH:
-            ESP_LOGI(TAG_HTTPS, "FINISH");
+            //ESP_LOGI(TAG_HTTPS, "FINISH");
             break;
         case HTTP_EVENT_DISCONNECTED:
             ESP_LOGI(TAG_HTTPS, "DISCONNECTED");
@@ -85,7 +56,80 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-void data_register()
+static void data_client_set(void *func, const char *url)
+{
+    func_pointer = func;
+    esp_http_client_config_t config =
+    {
+        .url            = url,
+        .event_handler  = _http_event_handle,
+        .buffer_size    = HTTPS_BUFFER,
+        .buffer_size_tx = HTTPS_BUFFER,
+    };
+    client = esp_http_client_init(&config);
+    esp_http_client_set_method(client, HTTP_METHOD_POST);
+    esp_http_client_set_post_field(client, post_data, strlen(post_data));
+
+    err = esp_http_client_perform(client);
+
+    if (err == ESP_OK)
+    {
+        ESP_LOGI(
+            TAG_HTTPS, "Status = %d, content_length = %d",
+            esp_http_client_get_status_code(client),
+            esp_http_client_get_content_length(client)
+            );
+        (*func_pointer)();
+    }
+    esp_http_client_cleanup(client);
+}
+
+static char enter_opt()
+{
+    uint8_t i = 0;
+    char out  = 0;
+    char in_opt[1] = "";
+    while(1)
+    {
+        i = 0;
+        while(1)
+        {
+            char ch;
+            ch = fgetc(stdin);
+            if(ch != 0xFF)
+            {
+                fputc(ch, stdout);
+                if(ch == '\b'){
+                    fprintf(stdout, "\033[K");
+                }
+                if (ch == '\n')
+                {
+                    break;
+                }
+                else if(ch == '\b')
+                {
+                    if(i > 0 && i <= 1)
+                    {
+                        in_opt[--i] = 0;
+                    }
+                }
+                else
+                {
+                    if(i < 1) in_opt[i] = ch;
+                    ++i;
+                }
+            }
+        }
+        if(i == 1 && isalpha(in_opt[0]))
+        {
+            if(in_opt[0] != 'y' || in_opt[0] != 'n') break;
+        }
+        ESP_LOGI(TAG, "Try again");
+    }
+    return in_opt[0];
+}
+
+static void register_on_api()
 {
     ESP_LOGI(TAG, "Enter the registration code:");
     uint8_t i;
@@ -170,87 +214,69 @@ void data_register()
 
     esp_read_mac(mac, 0);
     memset(tmp_str, 0, 24);
-    sprintf(tmp_str,"%x:%x:%x:%x:%x:%x",
-            mac[0],
-            mac[1],
-            mac[2],
-            mac[3],
-            mac[4],
-            mac[5]);
+    sprintf(tmp_str,"%x:%x:%x:%x:%x:%x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     strcat(post_data, "&mac=");
     strcat(post_data, tmp_str);
 
     memset(tmp_str, 0, 24);
-    sprintf(tmp_str,"%u.%u.%u.%u",
-            ip_addr.addr[0],
-            ip_addr.addr[1],
-            ip_addr.addr[2],
-            ip_addr.addr[3]);
+    sprintf(tmp_str,"%u.%u.%u.%u", ip_addr.addr[0], ip_addr.addr[1], ip_addr.addr[2], ip_addr.addr[3]);
     strcat(post_data, "&ip=");
     strcat(post_data, tmp_str);
 
     memset(tmp_str, 0, 24);
-    sprintf(tmp_str,"%u.%u.%u.%u",
-            gw_addr.addr[0],
-            gw_addr.addr[1],
-            gw_addr.addr[2],
-            gw_addr.addr[3]);
+    sprintf(tmp_str,"%u.%u.%u.%u", gw_addr.addr[0], gw_addr.addr[1], gw_addr.addr[2], gw_addr.addr[3]);
     strcat(post_data, "&gateway=");
     strcat(post_data, tmp_str);
 
-    esp_http_client_config_t config_reg =
-    {
-        .url            = URL_REG,
-        .event_handler  = _http_event_handle,
-        .buffer_size    = HTTPS_BUFFER,
-        .buffer_size_tx = HTTPS_BUFFER,
-    };
-    client = esp_http_client_init(&config_reg);
-    esp_http_client_set_method(client, HTTP_METHOD_POST);
-    esp_http_client_set_post_field(client, post_data, strlen(post_data));
+    data_client_set(&parse_register, URL_REG);
+    FILE *f  = fopen(FILE_CONFIG, "w");
+    fprintf(f, "%s,%s,%s", apitoken, idcontrolador, database);
+    fclose(f);
+}
 
-    err = esp_http_client_perform(client);
-
-    if (err == ESP_OK)
+void data_register()
+{
+    struct stat st;
+    if (stat(FILE_CONFIG, &st) == 0)
     {
-        ESP_LOGI(
-            TAG_HTTPS, "Status = %d, content_length = %d",
-            esp_http_client_get_status_code(client),
-            esp_http_client_get_content_length(client)
-            );
-        parse_register();
+        ESP_LOGI(TAG, "There is a previous device configuration. Do you want to load it? (y/n):");
+        char opt = enter_opt();
+        if(opt == 'y')
+        {
+            FILE *f  = fopen(FILE_CONFIG, "r");
+            fscanf(f, "%[^,],%[^,],%[^,]", apitoken, idcontrolador, database);
+            fclose(f);
+            RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
+        }
+        else
+        {
+            register_on_api();
+        }
     }
-    esp_http_client_cleanup(client);
+    else
+    {
+        ESP_LOGI(TAG, "There is a no previous device configuration.");
+        register_on_api();
+    }
 }
 
 void IRAM_ATTR data_task(void *arg)
 {
     struct stat st;
-    bool start_up = 0;
-    strcpy(apitoken, "dreamit-testing-rd107-2020");
-    strcpy(idcontrolador, "1");
-    strcpy(database, "GK2_Industrias");
-    if (stat(REG_TIMESTAMP, &st) == 0)
+    if (stat(FILE_TIMESTAMP, &st) == 0)
     {
-        start_up = 1;
-
-        FILE *f  = fopen(REG_TIMESTAMP, "r");
-        fscanf(f, "%llu %u", &timestamp, &registers_size);
+        FILE *f  = fopen(FILE_TIMESTAMP, "r");
+        fscanf(f, "%llu %u %u", &timestamp_temp, &card_size, &reservation_size);
         fclose(f);
 
         ESP_LOGI(TAG, "Loaded data");
         RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
-        vTaskPrioritySet(wiegand_task_handle, 1);
-        vTaskPrioritySet(rgb_task_handle    , 2);
-        vTaskPrioritySet(relay_task_handle  , 2);
-        vTaskPrioritySet(buzzer_task_handle , 2);
-        vTaskPrioritySet(qr_task_handle     , 2);
     }
     else
     {
-        start_up       = 0;
-        timestamp      = 0;
-        registers_size = 0;
+        timestamp        = 0;
+        card_size        = 0;
+        reservation_size = 0;
         ESP_LOGI(TAG, "Empty local data");
     }
 
@@ -273,87 +299,22 @@ void IRAM_ATTR data_task(void *arg)
         sprintf(lastTimestamp, "%ld", system_now);
         strcat(post_data, lastTimestamp);
 
-        ESP_LOGI(TAG, "Last timestamp = %llu | Total registers = %u", timestamp, registers_size);
+        ESP_LOGI(TAG, "Last timestamp = %llu | Total registers = %u | Total reservations = %u", timestamp, card_size, reservation_size);
 
-        client = esp_http_client_init(&config);
-        esp_http_client_set_method(client, HTTP_METHOD_POST);
-        esp_http_client_set_post_field(client, post_data, strlen(post_data));
 
-        err = esp_http_client_perform(client);
+        data_client_set(&parse_data, URL);
+        data_client_set(&parse_reservations, URL_RESERVATIONS);
+        data_client_set(&parse_command, URL_COMMAND);
+        data_client_set(&parse_qr, URL_QR);
 
-        if (err == ESP_OK)
-        {
-            ESP_LOGI(
-                TAG_HTTPS, "Status = %d, content_length = %d",
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client)
-                );
-            parse_data();
-            if(start_up == 0)
-            {
-                start_up = 1;
-                vTaskPrioritySet(wiegand_task_handle, 1);
-                vTaskPrioritySet(rgb_task_handle    , 2);
-                vTaskPrioritySet(relay_task_handle  , 2);
-                vTaskPrioritySet(buzzer_task_handle , 2);
-                vTaskPrioritySet(qr_task_handle     , 2);
-            }
-        }
+        vTaskPrioritySet(wiegand_task_handle, 1);
+        vTaskPrioritySet(rgb_task_handle    , 2);
+        vTaskPrioritySet(relay_task_handle  , 2);
+        vTaskPrioritySet(buzzer_task_handle , 2);
+        vTaskPrioritySet(qr_task_handle     , 2);
 
-        esp_http_client_cleanup(client);
-
-        client = esp_http_client_init(&config_reservations);
-        esp_http_client_set_method(client, HTTP_METHOD_POST);
-        esp_http_client_set_post_field(client, post_data, strlen(post_data));
-
-        err = esp_http_client_perform(client);
-
-        if (err == ESP_OK)
-        {
-            ESP_LOGI(
-                TAG_HTTPS, "Status = %d, content_length = %d",
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client)
-                );
-            parse_reservations();
-        }
-        esp_http_client_cleanup(client);
-
-        client = esp_http_client_init(&config_cmd);
-        esp_http_client_set_method(client, HTTP_METHOD_POST);
-        esp_http_client_set_post_field(client, post_data, strlen(post_data));
-
-        err = esp_http_client_perform(client);
-
-        if (err == ESP_OK)
-        {
-            ESP_LOGI(
-                TAG_HTTPS, "Status = %d, content_length = %d",
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client)
-                );
-            parse_command();
-        }
-        esp_http_client_cleanup(client);
-
-        client = esp_http_client_init(&config_qr);
-        esp_http_client_set_method(client, HTTP_METHOD_POST);
-        esp_http_client_set_post_field(client, post_data, strlen(post_data));
-
-        err = esp_http_client_perform(client);
-
-        if (err == ESP_OK)
-        {
-            ESP_LOGI(
-                TAG_HTTPS, "Status = %d, content_length = %d",
-                esp_http_client_get_status_code(client),
-                esp_http_client_get_content_length(client)
-                );
-            parse_qr();
-        }
-        esp_http_client_cleanup(client);
-
-        /*printf("Sizes = %u, %u\n", reservation_size, registers_size);
+        /*
+        printf("Sizes = %u, %u\n", reservation_size, card_size);
 
         uint32_t read_size = 0;
         uint32_t count     = 0;
@@ -361,9 +322,9 @@ void IRAM_ATTR data_task(void *arg)
 
         FILE *f = NULL;
 
-        count = registers_size / CARD_READER_SIZE;
-        rem   = registers_size % CARD_READER_SIZE;
-        f = fopen(REG_FILE, "r");
+        count = card_size / CARD_READER_SIZE;
+        rem   = card_size % CARD_READER_SIZE;
+        f = fopen(FILE_CARDS, "r");
         for(int i = 0; i < count; i++)
         {
             read_size  = fread (card_data, CARD_SIZE, CARD_READER_SIZE, f);
@@ -389,7 +350,7 @@ void IRAM_ATTR data_task(void *arg)
             {
                 strftime(strftime_buf, sizeof(strftime_buf), "%c", localtime((time_t*)&reservation_data[j].init_time));
                 strftime(strftime_buf_end, sizeof(strftime_buf_end), "%c", localtime((time_t*)&reservation_data[j].end_time));
-                printf("%u, %s, %s\n",reservation_data[j].index, strftime_buf, strftime_buf_end);
+                printf("%u, %s, %s, %s, %s\n",reservation_data[j].index, reservation_data[j].code,reservation_data[j].qr, strftime_buf, strftime_buf_end);
             }
         }
         read_size  = fread (reservation_data, RESERVATION_SIZE, rem, f);
@@ -397,12 +358,11 @@ void IRAM_ATTR data_task(void *arg)
         {
             strftime(strftime_buf, sizeof(strftime_buf), "%c", localtime((time_t*)&reservation_data[j].init_time));
             strftime(strftime_buf_end, sizeof(strftime_buf_end), "%c", localtime((time_t*)&reservation_data[j].end_time));
-            printf("%u, %s, %s\n",reservation_data[j].index, strftime_buf, strftime_buf_end);
+            printf("%u, %8s, %6s, %s, %s\n",reservation_data[j].index, reservation_data[j].code,reservation_data[j].qr, strftime_buf, strftime_buf_end);
         }
         fclose(f);*/
 
         timestamp = timestamp_temp;
-
         vTaskDelay(5000/portTICK_PERIOD_MS);
     }
 }

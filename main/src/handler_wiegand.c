@@ -1,5 +1,5 @@
 #include "handler_wiegand.h"
-#include "handler_card.h"
+#include "handler_search.h"
 
 static const char *TAG = "wiegand_handler";
 
@@ -50,7 +50,7 @@ void IRAM_ATTR wiegand_task(void *arg)
         }
         else if(count > 0)
         {
-            card_search(count, store_card);
+            search_card(count, store_card);
             count         = 0;
             store_card    = 0;
             input_read[0] = 0;

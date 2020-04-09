@@ -5,7 +5,7 @@
 #include "handler_wiegand.h"
 #include "handler_buzzer.h"
 #include "handler_relay.h"
-#include "handler_card.h"
+#include "handler_search.h"
 #include "handler_screen.h"
 #include "handler_touch.h"
 #include "handler_spi.h"
@@ -16,7 +16,7 @@
 static const char* TAG = "app_main";
 
 uint32_t reservation_size = 0;
-uint32_t registers_size   = 0;
+uint32_t card_size   = 0;
 uint64_t timestamp        = 0;
 uint64_t timestamp_temp   = 0;
 
@@ -56,10 +56,11 @@ static void setup()
     fs_init();
 
     // Remove data files
-    remove(REG_FILE);
-    remove(REG_FILE_JSON);
+    remove(FILE_CARDS);
+    remove(FILE_JSON);
     remove(FILE_RESERVATIONS);
-    remove(REG_TIMESTAMP);
+    //remove(FILE_CONFIG);
+    remove(FILE_TIMESTAMP);
 
     // Initiate all peripherals
     spi_init();
@@ -73,7 +74,7 @@ static void setup()
     ntp_init();
 
     // Register device
-    //data_register();
+    data_register();
 
     // --------------------------------------------
     // Enable Watchdog after all the configurations

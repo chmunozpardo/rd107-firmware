@@ -9,6 +9,24 @@ static DRAM_ATTR uint32_t read_size =    0;
 static FILE *f = NULL;
 static FILE *g = NULL;
 
+void parse_register(void)
+{
+    f = fopen(FILE_JSON, "r");
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file for reading");
+        return;
+    }
+
+    fscanf(f, " {\"apitoken\":\"%[^,\"]\",\"base_datos\":\"%[^,\"]\",\"idDevice\":%[^,\"],\"estado\":\"OK\"}",
+        apitoken,
+        database,
+        idcontrolador
+        );
+    fclose(f);
+    remove(FILE_JSON);
+}
+
 static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
 {
     FILE *f           = NULL;
@@ -18,7 +36,7 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
     for(int i = 0; i < read_size; i++)
     {
         xSemaphoreTake(reg_semaphore, portMAX_DELAY);
-        f = fopen(REG_FILE, "r+");
+        f = fopen(FILE_CARDS, "r+");
         check = 0;
         while(check == 0)
         {
@@ -40,7 +58,7 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
         if(check == 0){
             ESP_LOGI(TAG, "Inserted new register");
             fwrite(&(input[i]), CARD_SIZE, 1, f);
-            ++registers_size;
+            ++card_size;
         }
         fclose(f);
         xSemaphoreGive(reg_semaphore);
@@ -87,7 +105,7 @@ static IRAM_ATTR void parse_insert_reservation(RESERVATION *input, uint32_t read
 
 void IRAM_ATTR parse_command(void)
 {
-    f = fopen(REG_FILE_JSON, "r");
+    f = fopen(FILE_JSON, "r");
     if (f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
@@ -115,30 +133,12 @@ void IRAM_ATTR parse_command(void)
         else ++offset;
     }
     fclose(f);
-    remove(REG_FILE_JSON);
-}
-
-void parse_register(void)
-{
-    f = fopen(REG_FILE_JSON, "r");
-    if (f == NULL)
-    {
-        ESP_LOGE(TAG, "Failed to open file for reading");
-        return;
-    }
-
-    fscanf(f, " {\"apitoken\":\"%[^,\"]\",\"base_datos\":\"%[^,\"]\",\"idDevice\":%[^,\"],\"estado\":\"OK\"}",
-        apitoken,
-        database,
-        idcontrolador
-        );
-    fclose(f);
-    remove(REG_FILE_JSON);
+    remove(FILE_JSON);
 }
 
 void IRAM_ATTR parse_qr(void)
 {
-    f = fopen(REG_FILE_JSON, "r");
+    f = fopen(FILE_JSON, "r");
     if (f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
@@ -154,12 +154,12 @@ void IRAM_ATTR parse_qr(void)
         QR_SIGNAL();
     }
     fclose(f);
-    remove(REG_FILE_JSON);
+    remove(FILE_JSON);
 }
 
 void IRAM_ATTR parse_data(void)
 {
-    f = fopen(REG_FILE_JSON, "r");
+    f = fopen(FILE_JSON, "r");
     if (f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
@@ -186,17 +186,17 @@ void IRAM_ATTR parse_data(void)
         else
         {
             xSemaphoreTake(reg_semaphore, portMAX_DELAY);
-            g     = fopen(REG_FILE, "a+");
+            g     = fopen(FILE_CARDS, "a+");
             count = new_regs / CARD_READER_SIZE;
             for(int i = 0; i < count; i++)
             {
                 read_size  = fread(card_data, CARD_SIZE, CARD_READER_SIZE, f);
-                registers_size += read_size;
+                card_size += read_size;
                 fwrite(card_data, CARD_SIZE, read_size, g);
                 RGB_SIGNAL(RGB_GREEN, (RGB_LEDS * i)/count, 0);
             };
             read_size  = fread(card_data, CARD_SIZE, new_regs % CARD_READER_SIZE, f);
-            registers_size += read_size;
+            card_size += read_size;
             fwrite(card_data, CARD_SIZE, read_size, g);
             RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
             fclose(g);
@@ -214,16 +214,16 @@ void IRAM_ATTR parse_data(void)
     ESP_LOGI(TAG, "Timestamp = %llu", timestamp_temp);
     ESP_LOGI(TAG, "Status = %s", line);
 
-    g = fopen(REG_TIMESTAMP, "w");
-    fprintf(g, "%llu %u %u", timestamp_temp, registers_size, reservation_size);
+    g = fopen(FILE_TIMESTAMP, "w");
+    fprintf(g, "%llu %u %u", timestamp_temp, card_size, reservation_size);
     fclose(g);
     fclose(f);
-    remove(REG_FILE_JSON);
+    remove(FILE_JSON);
 }
 
 void IRAM_ATTR parse_reservations(void)
 {
-    f = fopen(REG_FILE_JSON, "r");
+    f = fopen(FILE_JSON, "r");
     if (f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
@@ -278,9 +278,9 @@ void IRAM_ATTR parse_reservations(void)
     ESP_LOGI(TAG, "Timestamp = %llu", timestamp_temp);
     ESP_LOGI(TAG, "Status = %s", line);
 
-    g = fopen(REG_TIMESTAMP, "w");
-    fprintf(g, "%llu %u %u", timestamp_temp, registers_size, reservation_size);
+    g = fopen(FILE_TIMESTAMP, "w");
+    fprintf(g, "%llu %u %u", timestamp_temp, card_size, reservation_size);
     fclose(g);
     fclose(f);
-    remove(REG_FILE_JSON);
+    remove(FILE_JSON);
 }

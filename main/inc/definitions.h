@@ -49,10 +49,12 @@
 
 #define HTTPS_BUFFER        (4096+0)
 
-#define REG_FILE_JSON       "/spiffs/registers.json"
-#define REG_FILE            "/spiffs/registers.db"
+#define FILE_JSON           "/spiffs/registers.json"
+#define FILE_CARDS          "/spiffs/registers.db"
 #define FILE_RESERVATIONS   "/spiffs/reservations.db"
-#define REG_TIMESTAMP       "/spiffs/timestamp.db"
+#define FILE_CONFIG         "/spiffs/config.txt"
+#define FILE_WIFI           "/spiffs/wifi.txt"
+#define FILE_TIMESTAMP      "/spiffs/timestamp.txt"
 
 #define COPY_SIZE           512
 
@@ -70,20 +72,34 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 } card_structure;
 
 typedef struct __attribute__((packed, aligned(1))) reservation_structure{
+    char qr[8];
+    char code[6];
     uint64_t init_time;
     uint64_t end_time;
     uint32_t index;
 } reservation_structure;
 
+typedef union ip4_str
+{
+    ip4_addr_t ip_addr_i;
+    struct
+    {
+        uint8_t addr[4];
+    };
+} ip4_str;
+
 #define CARD                    card_structure
 #define RESERVATION             reservation_structure
 
 #define CARD_SIZE               sizeof(CARD)
-#define CARD_READER_SIZE        (4096)
+#define CARD_READER_SIZE        (2048)
 #define RESERVATION_SIZE        sizeof(RESERVATION)
-#define RESERVATION_READER_SIZE (2048)
+#define RESERVATION_READER_SIZE (1024)
 
-#define CARD_COMPARE(A, B)  A.cardType == B.cardType && A.code1 == B.code1 && A.code2 == B.code2
+#define CARD_COMPARE(A, B)              A.cardType == B.cardType && A.code1 == B.code1 && A.code2 == B.code2
+#define RESERVATION_COMPARE_QR(A, B)    strncmp(A, B.qr, 6);
+#define RESERVATION_COMPARE_CODE(A, B)  strncmp(A, B.code, 6);
+
 #define MIFARE(value)       (value & 0x000000FF) << 24 | \
                             (value & 0x0000FF00) <<  8 | \
                             (value & 0x00FF0000) >>  8 | \
@@ -114,7 +130,7 @@ typedef struct __attribute__((packed, aligned(1))) reservation_structure{
 #define LCD_PIN_IRQ         26
 
 #define QR_SIZE             14
-#define QR_OFFSET           (320-QR_SIZE*21)/2
+#define QR_OFFSET           (320 - QR_SIZE * 21)/2
 #define SCREEN_BUFFER       1024
 
 // WS2812 parameters
@@ -161,18 +177,10 @@ typedef struct __attribute__((packed, aligned(1))) reservation_structure{
 #define CONFIG_ESP_TASK_WDT_TIMEOUT_MS 5
 #define DEFAULT_SCAN_LIST_SIZE         20
 
-typedef union ip4_str
-{
-    ip4_addr_t ip_addr_i;
-    struct
-    {
-        uint8_t addr[4];
-    };
-} ip4_str;
-
 extern char apitoken[30];
 extern char database[20];
 extern char idcontrolador[3];
+
 extern char strftime_buf[32];
 extern char strftime_buf_end[32];
 
@@ -183,7 +191,7 @@ extern uint8_t mac[6];
 extern time_t system_now;
 
 extern uint8_t  loaded_data;
-extern uint32_t registers_size;
+extern uint32_t card_size;
 extern uint32_t reservation_size;
 extern uint64_t timestamp;
 extern uint64_t timestamp_temp;

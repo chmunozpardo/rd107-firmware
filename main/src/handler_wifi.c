@@ -32,119 +32,99 @@ static void on_wifi_disconnect(void *arg, esp_event_base_t event_base,
     ESP_ERROR_CHECK(esp_wifi_connect());
 }
 
-static uint8_t enter_opt()
+static int8_t enter_opt()
 {
-    uint8_t i;
+    uint8_t i  = 0;
+    int8_t out = 0;
+    int8_t state;
+    char in_opt[3] = "";
     while(1)
     {
-        i = 0;
-        char in_opt[2] = "0";
-        while(1)
+        char ch;
+        ch = fgetc(stdin);
+        if(ch != 0xFF)
         {
-            char ch;
-            ch = fgetc(stdin);
-            if(ch != 0xFF)
+            fputc(ch, stdout);
+            if(ch == '\b'){
+                fprintf(stdout, "\033[K");
+            }
+            if (ch == '\n')
             {
-                fputc(ch, stdout);
-                if(ch == '\b'){
-                    fprintf(stdout, "\033[K");
-                }
-                if (ch == '\n')
+                break;
+            }
+            else if(ch == '\b')
+            {
+                if(i > 0 && i <= 3)
                 {
-                    break;
-                }
-                else if(ch == '\b')
-                {
-                    if(i > 0)
-                    {
-                        in_opt[--i] = 0;
-                    }
-                }
-                else
-                {
-                    in_opt[i] = ch;
-                    ++i;
-                    if(i >= 3) break;
+                    in_opt[--i] = 0;
                 }
             }
+            else
+            {
+                if(i < 3) in_opt[i] = ch;
+                ++i;
+            }
         }
-        if(i == 1 && isdigit(in_opt[0]))
-        {
-            i = atoi(in_opt);
-            if(i < (ap_count+1)) break;
-        }
-        else if(i == 2 && isdigit(in_opt[0]) && isdigit(in_opt[1]))
-        {
-            i = atoi(in_opt);
-            if(i < (ap_count+1)) break;
-        }
-        ESP_LOGI(TAG, "Try again");
     }
-    return i;
-}
-
-static void enter_password(char *in_opt)
-{
-    uint8_t i;
-    uint8_t state;
-    while(1)
+    uint8_t max_i = (i < 50) ? i : 50;
+    if(max_i == 0) state = 1;
+    for(int j = 0; j < max_i; j++)
     {
-        i = 0;
-        state = 0;
-        while(1)
+        if(!isdigit(in_opt[j]))
         {
-            char ch;
-            ch = fgetc(stdin);
-            if(ch != 0xFF)
-            {
-                fputc(ch, stdout);
-                if(ch == '\b'){
-                    fprintf(stdout, "\033[K");
-                }
-                if (ch == '\n')
-                {
-                    break;
-                }
-                else if(ch == '\b')
-                {
-                    if(i > 0)
-                    {
-                        in_opt[--i] = 0;
-                    }
-                }
-                else
-                {
-                    in_opt[i] = ch;
-                    ++i;
-                    if(i >= 50) break;
-                }
-            }
-        }
-        if(i > 0)
-        {
-            for(int j = 0; j < i; j++)
-            {
-                if(!isalnum(in_opt[j]))
-                {
-                    printf("Not alpha = %c\n", in_opt[j]);
-                    state = 1;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            state = 1;
-        }
-        if(state == 1)
-        {
-            ESP_LOGI(TAG, "Try again");
-        }
-        else
-        {
+            ESP_LOGE(TAG, "Not a numeric option");
+            out = -1;
             break;
         }
     }
+    if(out != -1) out = atoi(in_opt);
+    return out;
+}
+
+static int8_t enter_password(char *in_opt)
+{
+    uint8_t i;
+    int8_t out = 0;
+    uint8_t state;
+    i = 0;
+    state = 0;
+    while(1)
+    {
+        char ch;
+        ch = fgetc(stdin);
+        if(ch != 0xFF)
+        {
+            fputc(ch, stdout);
+            if(ch == '\b'){
+                fprintf(stdout, "\033[K");
+            }
+            if (ch == '\n')
+            {
+                break;
+            }
+            else if(ch == '\b')
+            {
+                if(i > 0 && i <= 50) in_opt[--i] = 0;
+            }
+            else
+            {
+                if(i < 50) in_opt[i] = ch;
+                ++i;
+            }
+        }
+    }
+    uint8_t max_i = (i < 50) ? i : 50;
+    if(max_i == 0) state = 1;
+    for(int j = 0; j < max_i; j++)
+    {
+        if(!isalnum(in_opt[j]))
+        {
+            ESP_LOGE(TAG, "Not an alphanumeric password");
+            out = -1;
+            break;
+        }
+    }
+    return out;
 }
 
 void wifi_init(void)
@@ -180,8 +160,12 @@ void wifi_init(void)
     ESP_ERROR_CHECK(esp_wifi_stop());
 
     ESP_LOGI(TAG, "Select network from list [1-%d]. Enter 0 for default:", ap_count);
-    uint8_t opt;
-    opt = enter_opt();
+    int8_t opt = -1;
+    char net_password[50] = "";
+    while(opt == -1)
+    {
+        opt = enter_opt();
+    }
 
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &on_wifi_disconnect, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &on_got_ip, NULL));
@@ -193,8 +177,12 @@ void wifi_init(void)
     if(opt > 0){
         ESP_LOGI(TAG, "Network selected: %s", ap_info[opt-1].ssid);
         ESP_LOGI(TAG, "Enter password:");
-        char net_password[50] = "";
-        enter_password(&net_password);
+        int8_t pass_out = -1;
+        while(pass_out == -1)
+        {
+            memset(net_password, 0, 50);
+            pass_out = enter_password(&net_password);
+        }
         wifi_config_t wifi_config = {0};
         strcpy((char *)wifi_config.sta.ssid, (char *)ap_info[opt-1].ssid);
         strcpy((char *)wifi_config.sta.password, (char *)net_password);
