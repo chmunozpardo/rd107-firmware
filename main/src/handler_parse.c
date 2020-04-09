@@ -23,15 +23,15 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
         while(check == 0)
         {
             pos_save = ftell(f);
-            f_read   = fread(registers_data, CARD_FULL_SIZE, CARD_READER_SIZE, f);
+            f_read   = fread(card_data, CARD_SIZE, CARD_READER_SIZE, f);
             if(f_read == 0) break;
             for(int j = 0; j < f_read; j++)
             {
-                if(input[i].index == registers_data[j].index)
+                if(input[i].index == card_data[j].index)
                 {
                     ESP_LOGI(TAG, "Modified old register");
-                    fseek(f, j*CARD_FULL_SIZE, pos_save);
-                    fwrite(&(input[i]), CARD_FULL_SIZE, 1, f);
+                    fseek(f, j*CARD_SIZE, pos_save);
+                    fwrite(&(input[i]), CARD_SIZE, 1, f);
                     check = 1;
                     break;
                 }
@@ -39,11 +39,49 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
         }
         if(check == 0){
             ESP_LOGI(TAG, "Inserted new register");
-            fwrite(&(input[i]), CARD_FULL_SIZE, 1, f);
+            fwrite(&(input[i]), CARD_SIZE, 1, f);
             ++registers_size;
         }
         fclose(f);
         xSemaphoreGive(reg_semaphore);
+    }
+}
+
+static IRAM_ATTR void parse_insert_reservation(RESERVATION *input, uint32_t read_size)
+{
+    FILE *f           = NULL;
+    bool check        =    0;
+    uint32_t f_read   =    0;
+    uint32_t pos_save =    0;
+    for(int i = 0; i < read_size; i++)
+    {
+        xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
+        f = fopen(FILE_RESERVATIONS, "r+");
+        check = 0;
+        while(check == 0)
+        {
+            pos_save = ftell(f);
+            f_read   = fread(reservation_data, RESERVATION_SIZE, RESERVATION_READER_SIZE, f);
+            if(f_read == 0) break;
+            for(int j = 0; j < f_read; j++)
+            {
+                if(input[i].index == card_data[j].index)
+                {
+                    ESP_LOGI(TAG, "Modified old reservation");
+                    fseek(f, j*RESERVATION_SIZE, pos_save);
+                    fwrite(&(input[i]), RESERVATION_SIZE, 1, f);
+                    check = 1;
+                    break;
+                }
+            }
+        }
+        if(check == 0){
+            ESP_LOGI(TAG, "Inserted new reservation");
+            fwrite(&(input[i]), RESERVATION_SIZE, 1, f);
+            ++reservation_size;
+        }
+        fclose(f);
+        xSemaphoreGive(reservation_semaphore);
     }
 }
 
@@ -109,9 +147,9 @@ void IRAM_ATTR parse_qr(void)
 
     char qr_placeholder[6] = "";
     fscanf(f, " {\"estado\":\"OK\",\"data\":\"%6s\"}", qr_placeholder);
-    ESP_LOGI(TAG, "QR Code = %s", qr_placeholder);
     if(strcmp(screen_qr, qr_placeholder) != 0)
     {
+        ESP_LOGI(TAG, "QR Code = %s", qr_placeholder);
         strcpy(screen_qr, qr_placeholder);
         QR_SIGNAL();
     }
@@ -139,11 +177,11 @@ void IRAM_ATTR parse_data(void)
             count = new_regs / COPY_SIZE;
             for(int i = 0; i < count; i++)
             {
-                read_size  = fread (data_importer, CARD_FULL_SIZE, COPY_SIZE, f);
-                parse_insert_card(data_importer, read_size);
+                read_size  = fread(card_importer, CARD_SIZE, COPY_SIZE, f);
+                parse_insert_card(card_importer, read_size);
             };
-            read_size  = fread (data_importer, CARD_FULL_SIZE, new_regs%COPY_SIZE, f);
-            parse_insert_card(data_importer, read_size);
+            read_size  = fread(card_importer, CARD_SIZE, new_regs%COPY_SIZE, f);
+            parse_insert_card(card_importer, read_size);
         }
         else
         {
@@ -152,14 +190,14 @@ void IRAM_ATTR parse_data(void)
             count = new_regs / CARD_READER_SIZE;
             for(int i = 0; i < count; i++)
             {
-                read_size  = fread (registers_data, CARD_FULL_SIZE, CARD_READER_SIZE, f);
+                read_size  = fread(card_data, CARD_SIZE, CARD_READER_SIZE, f);
                 registers_size += read_size;
-                fwrite(registers_data, CARD_FULL_SIZE, read_size, g);
+                fwrite(card_data, CARD_SIZE, read_size, g);
                 RGB_SIGNAL(RGB_GREEN, (RGB_LEDS * i)/count, 0);
             };
-            read_size  = fread (registers_data, CARD_FULL_SIZE, new_regs % CARD_READER_SIZE, f);
+            read_size  = fread(card_data, CARD_SIZE, new_regs % CARD_READER_SIZE, f);
             registers_size += read_size;
-            fwrite(registers_data, CARD_FULL_SIZE, read_size, g);
+            fwrite(card_data, CARD_SIZE, read_size, g);
             RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
             fclose(g);
             xSemaphoreGive(reg_semaphore);
@@ -172,12 +210,76 @@ void IRAM_ATTR parse_data(void)
         ESP_LOGI(TAG, "No new registers");
     }
 
-    fscanf(f, " ,\"currentTimestamp\":%llu},\"estado\":%[^}]", &timestamp, line);
-    ESP_LOGI(TAG, "Timestamp = %llu", timestamp);
+    fscanf(f, " ,\"currentTimestamp\":%llu},\"estado\":%[^}]", &timestamp_temp, line);
+    ESP_LOGI(TAG, "Timestamp = %llu", timestamp_temp);
     ESP_LOGI(TAG, "Status = %s", line);
 
     g = fopen(REG_TIMESTAMP, "w");
-    fprintf(g, "%llu %u", timestamp, registers_size);
+    fprintf(g, "%llu %u %u", timestamp_temp, registers_size, reservation_size);
+    fclose(g);
+    fclose(f);
+    remove(REG_FILE_JSON);
+}
+
+void IRAM_ATTR parse_reservations(void)
+{
+    f = fopen(REG_FILE_JSON, "r");
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file for reading");
+        return;
+    }
+
+    fscanf(f, " {\"data\":{\"countData\":%d,\"accessRecords\":", &new_regs);
+
+    if(new_regs > 0)
+    {
+        ESP_LOGI(TAG, "New reservations size = %d", new_regs);
+        ESP_LOGI(TAG, "Importing reservations...");
+        if(timestamp > 0)
+        {
+            count = new_regs / COPY_SIZE;
+            for(int i = 0; i < count; i++)
+            {
+                read_size  = fread(reservation_importer, RESERVATION_SIZE, COPY_SIZE, f);
+                parse_insert_reservation(reservation_importer, read_size);
+            };
+            read_size  = fread (reservation_importer, RESERVATION_SIZE, new_regs%COPY_SIZE, f);
+            parse_insert_reservation(reservation_importer, read_size);
+        }
+        else
+        {
+            xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
+            g     = fopen(FILE_RESERVATIONS, "a+");
+            count = new_regs / RESERVATION_READER_SIZE;
+            for(int i = 0; i < count; i++)
+            {
+                read_size  = fread(reservation_data, RESERVATION_SIZE, RESERVATION_READER_SIZE, f);
+                reservation_size += read_size;
+                fwrite(reservation_data, RESERVATION_SIZE, read_size, g);
+                RGB_SIGNAL(RGB_GREEN, (RGB_LEDS * i)/count, 0);
+            };
+            read_size  = fread (reservation_data, RESERVATION_SIZE, new_regs % RESERVATION_READER_SIZE, f);
+            reservation_size += read_size;
+            fwrite(reservation_data, RESERVATION_SIZE, read_size, g);
+            RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
+            fclose(g);
+            xSemaphoreGive(reservation_semaphore);
+        }
+        ESP_LOGI(TAG, "Finished importing reservations");
+    }
+    else
+    {
+        RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
+        ESP_LOGI(TAG, "No new reservations");
+    }
+
+    fscanf(f, " ,\"currentTimestamp\":%llu},\"estado\":%[^}]", &timestamp_temp, line);
+    ESP_LOGI(TAG, "Timestamp = %llu", timestamp_temp);
+    ESP_LOGI(TAG, "Status = %s", line);
+
+    g = fopen(REG_TIMESTAMP, "w");
+    fprintf(g, "%llu %u %u", timestamp_temp, registers_size, reservation_size);
     fclose(g);
     fclose(f);
     remove(REG_FILE_JSON);

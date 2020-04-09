@@ -39,15 +39,19 @@
 #define RD_SERIE            "cmunoz"
 #define RD_CANALES          "1"
 
+#define LOCAL_TIMEZONE      "<-04>4"
+
 #define URL                 "http://192.168.1.88:8080/control_acceso/obtenerMediosAccesoControladorBinario"
 #define URL_COMMAND         "http://192.168.1.88:8080/control_acceso/obtenerComandosManualesPendientesControlador"
 #define URL_QR              "http://192.168.1.88:8080/control_acceso/obtenerCodigoQR"
+#define URL_RESERVATIONS    "http://192.168.1.88:8080/control_acceso/obtenerReservasBinario"
 #define URL_REG             "http://192.168.1.88:8080/control_acceso/registrarControlador"
 
 #define HTTPS_BUFFER        (4096+0)
 
 #define REG_FILE_JSON       "/spiffs/registers.json"
 #define REG_FILE            "/spiffs/registers.db"
+#define FILE_RESERVATIONS   "/spiffs/reservations.db"
 #define REG_TIMESTAMP       "/spiffs/timestamp.db"
 
 #define COPY_SIZE           512
@@ -65,9 +69,19 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
     uint32_t index;
 } card_structure;
 
-#define CARD_FULL_SIZE      17
-#define CARD_READER_SIZE    (4096+1024)
-#define CARD                card_structure
+typedef struct __attribute__((packed, aligned(1))) reservation_structure{
+    uint64_t init_time;
+    uint64_t end_time;
+    uint32_t index;
+} reservation_structure;
+
+#define CARD                    card_structure
+#define RESERVATION             reservation_structure
+
+#define CARD_SIZE               sizeof(CARD)
+#define CARD_READER_SIZE        (4096)
+#define RESERVATION_SIZE        sizeof(RESERVATION)
+#define RESERVATION_READER_SIZE (2048)
 
 #define CARD_COMPARE(A, B)  A.cardType == B.cardType && A.code1 == B.code1 && A.code2 == B.code2
 #define MIFARE(value)       (value & 0x000000FF) << 24 | \
@@ -159,17 +173,26 @@ typedef union ip4_str
 extern char apitoken[30];
 extern char database[20];
 extern char idcontrolador[3];
+extern char strftime_buf[32];
+extern char strftime_buf_end[32];
 
 extern ip4_str ip_addr;
 extern ip4_str gw_addr;
 extern uint8_t mac[6];
 
+extern time_t system_now;
+
 extern uint8_t  loaded_data;
 extern uint32_t registers_size;
+extern uint32_t reservation_size;
 extern uint64_t timestamp;
+extern uint64_t timestamp_temp;
 
-extern CARD registers_data[CARD_READER_SIZE];
-extern CARD data_importer[COPY_SIZE];
+extern CARD card_importer[COPY_SIZE];
+extern CARD card_data[CARD_READER_SIZE];
+
+extern RESERVATION reservation_importer[COPY_SIZE];
+extern RESERVATION reservation_data[RESERVATION_READER_SIZE];
 
 extern xQueueHandle qr_task_queue;
 extern xQueueHandle ntp_task_queue;
@@ -178,6 +201,7 @@ extern xQueueHandle relay_task_queue;
 extern xQueueHandle buzzer_task_queue;
 
 extern SemaphoreHandle_t reg_semaphore;
+extern SemaphoreHandle_t reservation_semaphore;
 
 extern TaskHandle_t qr_task_handle;
 extern TaskHandle_t ntp_task_handle;

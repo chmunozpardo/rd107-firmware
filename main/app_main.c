@@ -15,8 +15,10 @@
 
 static const char* TAG = "app_main";
 
-uint32_t registers_size = 0;
-uint64_t timestamp      = 0;
+uint32_t reservation_size = 0;
+uint32_t registers_size   = 0;
+uint64_t timestamp        = 0;
+uint64_t timestamp_temp   = 0;
 
 char screen_qr[6] = "000000";
 
@@ -32,10 +34,14 @@ TaskHandle_t buzzer_task_handle  = NULL;
 TaskHandle_t data_task_handle    = NULL;
 TaskHandle_t wiegand_task_handle = NULL;
 
-SemaphoreHandle_t reg_semaphore = NULL;
+SemaphoreHandle_t reg_semaphore         = NULL;
+SemaphoreHandle_t reservation_semaphore = NULL;
 
-DRAM_ATTR CARD data_importer[COPY_SIZE]         = {0};
-DRAM_ATTR CARD registers_data[CARD_READER_SIZE] = {0};
+DRAM_ATTR CARD card_importer[COPY_SIZE]              = {0};
+DRAM_ATTR CARD card_data[CARD_READER_SIZE]           = {0};
+
+DRAM_ATTR RESERVATION reservation_importer[COPY_SIZE]           = {0};
+DRAM_ATTR RESERVATION reservation_data[RESERVATION_READER_SIZE] = {0};
 
 static void setup()
 {
@@ -43,7 +49,8 @@ static void setup()
     esp_task_wdt_deinit();
 
     // Registers file semaphore
-    reg_semaphore    = xSemaphoreCreateMutex();
+    reg_semaphore         = xSemaphoreCreateMutex();
+    reservation_semaphore = xSemaphoreCreateMutex();
 
     // First load filesystem
     fs_init();
@@ -51,6 +58,7 @@ static void setup()
     // Remove data files
     remove(REG_FILE);
     remove(REG_FILE_JSON);
+    remove(FILE_RESERVATIONS);
     remove(REG_TIMESTAMP);
 
     // Initiate all peripherals
@@ -65,7 +73,7 @@ static void setup()
     ntp_init();
 
     // Register device
-    data_register();
+    //data_register();
 
     // --------------------------------------------
     // Enable Watchdog after all the configurations

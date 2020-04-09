@@ -10,6 +10,7 @@ void parse_qr(void);
 void parse_data(void);
 void parse_command(void);
 void parse_register(void);
+void parse_reservations(void);
 
 #ifdef __cplusplus
 }

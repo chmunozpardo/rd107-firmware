@@ -42,11 +42,11 @@ void IRAM_ATTR card_search(uint8_t size, uint64_t value)
         return;
     }
 
-    while((read_size = fread(registers_data, CARD_FULL_SIZE, CARD_READER_SIZE, f)) > 0)
+    while((read_size = fread(card_data, CARD_SIZE, CARD_READER_SIZE, f)) > 0)
     {
         for(int i = 0; i < read_size; i++)
         {
-            status = CARD_COMPARE(inputCard, registers_data[i]);
+            status = CARD_COMPARE(inputCard, card_data[i]);
             if(status) break;
         }
     }

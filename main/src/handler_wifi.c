@@ -8,7 +8,8 @@ static const char *TAG = "wifi_handler";
 static EventGroupHandle_t s_connect_event_group;
 
 static uint16_t ap_count = 0;
-static uint16_t number = DEFAULT_SCAN_LIST_SIZE;
+static uint16_t number   = DEFAULT_SCAN_LIST_SIZE;
+
 static wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
 
 ip4_str ip_addr = {0};

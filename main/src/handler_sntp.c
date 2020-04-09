@@ -2,21 +2,24 @@
 
 static const char *TAG = "sntp_handler";
 
-static char strftime_buf[64];
+time_t system_now = 0;
 
-static time_t now         =  0 ;
+char strftime_buf[32];
+char strftime_buf_end[32];
+
 static struct tm timeinfo = {0};
 static int retry          =  0 ;
 
 static void time_sync_notification_cb(struct timeval *tv)
 {
     ESP_LOGI(TAG, "NTP synchronized");
+    time(&system_now);
 }
 
 void ntp_init(void)
 {
     ESP_LOGI(TAG, "Initializing SNTP");
-    setenv("TZ", "<-03>3", 1);
+    setenv("TZ", LOCAL_TIMEZONE, 1);
     tzset();
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
     sntp_setservername(0, "ntp.shoa.cl");
@@ -29,8 +32,7 @@ void ntp_init(void)
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 
-    time(&now);
-    localtime_r(&now, &timeinfo);
+    localtime_r(&system_now, &timeinfo);
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
     ESP_LOGI(TAG, "The current date/time in Chile is: %s", strftime_buf);
 }

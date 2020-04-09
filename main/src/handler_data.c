@@ -10,13 +10,21 @@ DRAM_ATTR char apitoken[30]     = {0};
 DRAM_ATTR char database[20]     = {0};
 DRAM_ATTR char idcontrolador[3] = {0};
 
-static DRAM_ATTR char post_data[200]    = "";
+static DRAM_ATTR char post_data[256]    = "";
 static DRAM_ATTR char lastTimestamp[20] = "0";
 
 static DRAM_ATTR esp_http_client_handle_t client;
 static DRAM_ATTR esp_http_client_config_t config =
     {
         .url            = URL,
+        .event_handler  = _http_event_handle,
+        .buffer_size    = HTTPS_BUFFER,
+        .buffer_size_tx = HTTPS_BUFFER,
+    };
+
+static DRAM_ATTR esp_http_client_config_t config_reservations =
+    {
+        .url            = URL_RESERVATIONS,
         .event_handler  = _http_event_handle,
         .buffer_size    = HTTPS_BUFFER,
         .buffer_size_tx = HTTPS_BUFFER,
@@ -59,6 +67,7 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
             break;
         case HTTP_EVENT_ON_DATA:
             ESP_LOGI(TAG_HTTPS, "DATA, len=%d", evt->data_len);
+            printf("%.*s\n", evt->data_len, (char*)evt->data);
             FILE *f;
             f = fopen(REG_FILE_JSON, "a+");
             if (f == NULL)
@@ -218,6 +227,9 @@ void IRAM_ATTR data_task(void *arg)
 {
     struct stat st;
     bool start_up = 0;
+    strcpy(apitoken, "dreamit-testing-rd107-2020");
+    strcpy(idcontrolador, "1");
+    strcpy(database, "GK2_Industrias");
     if (stat(REG_TIMESTAMP, &st) == 0)
     {
         start_up = 1;
@@ -242,23 +254,25 @@ void IRAM_ATTR data_task(void *arg)
         ESP_LOGI(TAG, "Empty local data");
     }
 
-    client = esp_http_client_init(&config);
-
-    memset(post_data, 0, 200);
-    strcat(post_data, "api_token=");
-    strcat(post_data, apitoken);
-    strcat(post_data, "&database=");
-    strcat(post_data, database);
-    strcat(post_data, "&id_controlador=");
-    strcat(post_data, idcontrolador);
-    strcat(post_data, "&nombreInstancia=");
-    strcat(post_data, database);
-    strcat(post_data, "&lastTimestamp=");
-    sprintf(lastTimestamp, "%llu", timestamp);
-    strcat(post_data, lastTimestamp);
-
     while(1)
     {
+
+        memset(post_data, 0, 200);
+        strcat(post_data, "api_token=");
+        strcat(post_data, apitoken);
+        strcat(post_data, "&database=");
+        strcat(post_data, database);
+        strcat(post_data, "&id_controlador=");
+        strcat(post_data, idcontrolador);
+        strcat(post_data, "&nombreInstancia=");
+        strcat(post_data, database);
+        strcat(post_data, "&lastTimestamp=");
+        sprintf(lastTimestamp, "%llu", timestamp);
+        strcat(post_data, lastTimestamp);
+        strcat(post_data, "&controladorTimestamp=");
+        sprintf(lastTimestamp, "%ld", system_now);
+        strcat(post_data, lastTimestamp);
+
         ESP_LOGI(TAG, "Last timestamp = %llu | Total registers = %u", timestamp, registers_size);
 
         client = esp_http_client_init(&config);
@@ -288,15 +302,22 @@ void IRAM_ATTR data_task(void *arg)
 
         esp_http_client_cleanup(client);
 
-        memset(post_data, 0, 200);
-        strcat(post_data, "api_token=");
-        strcat(post_data, apitoken);
-        strcat(post_data, "&database=");
-        strcat(post_data, database);
-        strcat(post_data, "&id_controlador=");
-        strcat(post_data, idcontrolador);
-        strcat(post_data, "&nombreInstancia=");
-        strcat(post_data, database);
+        client = esp_http_client_init(&config_reservations);
+        esp_http_client_set_method(client, HTTP_METHOD_POST);
+        esp_http_client_set_post_field(client, post_data, strlen(post_data));
+
+        err = esp_http_client_perform(client);
+
+        if (err == ESP_OK)
+        {
+            ESP_LOGI(
+                TAG_HTTPS, "Status = %d, content_length = %d",
+                esp_http_client_get_status_code(client),
+                esp_http_client_get_content_length(client)
+                );
+            parse_reservations();
+        }
+        esp_http_client_cleanup(client);
 
         client = esp_http_client_init(&config_cmd);
         esp_http_client_set_method(client, HTTP_METHOD_POST);
@@ -332,18 +353,55 @@ void IRAM_ATTR data_task(void *arg)
         }
         esp_http_client_cleanup(client);
 
-        memset(post_data, 0, 200);
-        strcat(post_data, "api_token=");
-        strcat(post_data, apitoken);
-        strcat(post_data, "&database=");
-        strcat(post_data, database);
-        strcat(post_data, "&id_controlador=");
-        strcat(post_data, idcontrolador);
-        strcat(post_data, "&nombreInstancia=");
-        strcat(post_data, database);
-        strcat(post_data, "&lastTimestamp=");
-        sprintf(lastTimestamp, "%llu", timestamp);
-        strcat(post_data, lastTimestamp);
+        /*printf("Sizes = %u, %u\n", reservation_size, registers_size);
+
+        uint32_t read_size = 0;
+        uint32_t count     = 0;
+        uint32_t rem       = 0;
+
+        FILE *f = NULL;
+
+        count = registers_size / CARD_READER_SIZE;
+        rem   = registers_size % CARD_READER_SIZE;
+        f = fopen(REG_FILE, "r");
+        for(int i = 0; i < count; i++)
+        {
+            read_size  = fread (card_data, CARD_SIZE, CARD_READER_SIZE, f);
+            for(int j = 0; j < read_size; j++)
+            {
+                printf("%u, %u, %u\n",card_data[j].index, card_data[j].code1, card_data[j].code2);
+            }
+        }
+        read_size  = fread (card_data, CARD_SIZE, rem, f);
+        for(int j = 0; j < read_size; j++)
+        {
+            printf("%u, %u, %u\n",card_data[j].index, card_data[j].code1, card_data[j].code2);
+        }
+        fclose(f);
+
+        count = reservation_size / RESERVATION_READER_SIZE;
+        rem   = reservation_size % RESERVATION_READER_SIZE;
+        f = fopen(FILE_RESERVATIONS, "r");
+        for(int i = 0; i < count; i++)
+        {
+            read_size  = fread (reservation_data, RESERVATION_SIZE, RESERVATION_READER_SIZE, f);
+            for(int j = 0; j < read_size; j++)
+            {
+                strftime(strftime_buf, sizeof(strftime_buf), "%c", localtime((time_t*)&reservation_data[j].init_time));
+                strftime(strftime_buf_end, sizeof(strftime_buf_end), "%c", localtime((time_t*)&reservation_data[j].end_time));
+                printf("%u, %s, %s\n",reservation_data[j].index, strftime_buf, strftime_buf_end);
+            }
+        }
+        read_size  = fread (reservation_data, RESERVATION_SIZE, rem, f);
+        for(int j = 0; j < read_size; j++)
+        {
+            strftime(strftime_buf, sizeof(strftime_buf), "%c", localtime((time_t*)&reservation_data[j].init_time));
+            strftime(strftime_buf_end, sizeof(strftime_buf_end), "%c", localtime((time_t*)&reservation_data[j].end_time));
+            printf("%u, %s, %s\n",reservation_data[j].index, strftime_buf, strftime_buf_end);
+        }
+        fclose(f);*/
+
+        timestamp = timestamp_temp;
 
         vTaskDelay(5000/portTICK_PERIOD_MS);
     }
