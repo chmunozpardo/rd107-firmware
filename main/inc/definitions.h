@@ -6,13 +6,17 @@
 #include <math.h>
 #include <time.h>
 #include <sys/time.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
+
 #include "driver/gpio.h"
 #include "driver/uart.h"
 #include "driver/spi_master.h"
+
+#include "esp_http_server.h"
 #include "esp_http_client.h"
 #include "esp_spiffs.h"
 #include "esp_system.h"
@@ -33,6 +37,8 @@
 
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
+
+#include "cJSON.h"
 
 #define RD_MODELO           "RD-107"
 #define RD_VERSION          "0.1"
