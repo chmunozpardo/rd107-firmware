@@ -13,6 +13,12 @@ DRAM_ATTR char apitoken[30]     = {0};
 DRAM_ATTR char database[20]     = {0};
 DRAM_ATTR char idcontrolador[3] = {0};
 
+static char opt_web               =  0;
+static uint8_t http_ind           =  0;
+static char registration_code[50] = "";
+
+static httpd_handle_t server_code = NULL;
+
 static DRAM_ATTR char post_data[256]    = "";
 static DRAM_ATTR char lastTimestamp[20] = "0";
 
@@ -40,9 +46,13 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
         case HTTP_EVENT_ON_DATA:
             ESP_LOGI(TAG_HTTPS, "DATA, len=%d", evt->data_len);
             FILE *f;
+            //printf("%.*s\n", evt->data_len, (char*)evt->data);
             f = fopen(FILE_JSON, "a+");
-            if (f == NULL)
+            if(f == NULL)
+            {
+                ESP_LOGE(TAG_HTTPS, "Could not append data to JSON file");
                 break;
+            }
             fwrite((char*)evt->data, 1, evt->data_len, f);
             fclose(f);
             break;
@@ -72,7 +82,7 @@ static void data_client_set(void *func, const char *url)
 
     err = esp_http_client_perform(client);
 
-    if (err == ESP_OK)
+    if(err == ESP_OK)
     {
         ESP_LOGI(
             TAG_HTTPS, "Status = %d, content_length = %d",
@@ -84,119 +94,186 @@ static void data_client_set(void *func, const char *url)
     esp_http_client_cleanup(client);
 }
 
-static char enter_opt()
+static int8_t enter_opt(char *in_opt)
 {
+    memset(in_opt, 0, 1);
     uint8_t i = 0;
-    char out  = 0;
-    char in_opt[1] = "";
+    char ch;
     while(1)
     {
-        i = 0;
-        while(1)
+        if(http_ind == 1) return -1;
+        ch = fgetc(stdin);
+        if(ch != 0xFF)
         {
-            char ch;
-            ch = fgetc(stdin);
-            if(ch != 0xFF)
-            {
-                fputc(ch, stdout);
-                if(ch == '\b'){
-                    fprintf(stdout, "\033[K");
-                }
-                if (ch == '\n')
-                {
-                    break;
-                }
-                else if(ch == '\b')
-                {
-                    if(i > 0 && i <= 1)
-                    {
-                        in_opt[--i] = 0;
-                    }
-                }
-                else
-                {
-                    if(i < 1) in_opt[i] = ch;
-                    ++i;
-                }
-            }
+            fputc(ch, stdout);
+            if(ch == '\n') break;
+            if(ch == '\b') fprintf(stdout, "\033[K");
+            if(ch == '\b' && i > 0 && i <= 1) in_opt[--i] = 0;
+            if(i < 1) in_opt[i++] = ch;
         }
-        if(i == 1 && isalpha(in_opt[0]))
-        {
-            if(in_opt[0] != 'y' || in_opt[0] != 'n') break;
-        }
-        ESP_LOGI(TAG, "Try again");
     }
-    return in_opt[0];
+    uint8_t max_i = (i < 1) ? i : 1;
+    for(int j = 0; j < max_i; j++)
+    {
+        if(in_opt[j] != 'y' && in_opt[j] != 'n')
+        {
+            ESP_LOGE(TAG, "Not a valid option");
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static int8_t enter_registration_code(char *in_opt)
+{
+    memset(in_opt, 0, 7);
+    uint8_t i = 0;
+    char ch;
+    while(1)
+    {
+        if(http_ind == 1) return -1;
+        ch = fgetc(stdin);
+        if(ch != 0xFF)
+        {
+            fputc(ch, stdout);
+            if(ch == '\n') break;
+            if(ch == '\b') fprintf(stdout, "\033[K");
+            if(ch == '\b' && i > 0 && i <= 7) in_opt[--i] = 0;
+            if(i < 7) in_opt[i++] = ch;
+        }
+    }
+    uint8_t max_i = (i < 7) ? i : 7;
+    for(int j = 0; j < max_i; j++)
+    {
+        if(!isdigit(in_opt[j]))
+        {
+            ESP_LOGE(TAG, "Not a numeric value");
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static esp_err_t config_get_handler(httpd_req_t *req)
+{
+    char ctm[128] = {'\0'};
+
+    memset(ctm, '\0', 128);
+    strcpy(ctm, "<form action=\"/config\" method=\"post\">");
+    httpd_resp_send_chunk(req, ctm, strlen(ctm));
+    memset(ctm, '\0', 128);
+    struct stat st;
+    if (stat(FILE_CONFIG, &st) == 0)
+    {
+        strcpy(ctm, "<label for=\"opt\">There is a previous device configuration. Do you want to load it? (y/n):</label><br>");
+        httpd_resp_send_chunk(req, ctm, strlen(ctm));
+        memset(ctm, '\0', 128);
+        strcpy(ctm, "<input type=\"radio\" name=\"opt\" value=\"y\">");
+        httpd_resp_send_chunk(req, ctm, strlen(ctm));
+        memset(ctm, '\0', 128);
+        strcpy(ctm, "<label for=\"opt\">Yes</label><br>");
+        httpd_resp_send_chunk(req, ctm, strlen(ctm));
+        memset(ctm, '\0', 128);
+        strcpy(ctm, "<input type=\"radio\" name=\"opt\" value=\"n\">");
+        httpd_resp_send_chunk(req, ctm, strlen(ctm));
+        memset(ctm, '\0', 128);
+        strcpy(ctm, "<label for=\"opt\">No</label><br>");
+        httpd_resp_send_chunk(req, ctm, strlen(ctm));
+        memset(ctm, '\0', 128);
+    }
+    else
+    {
+        strcpy(ctm, "<label for=\"opt\">There is no previous device configuration.</label><br>");
+        httpd_resp_send_chunk(req, ctm, strlen(ctm));
+        memset(ctm, '\0', 128);
+    }
+    strcpy(ctm, "<label for=\"code\">Enter registration code:</label>");
+    httpd_resp_send_chunk(req, ctm, strlen(ctm));
+    memset(ctm, '\0', 128);
+    strcpy(ctm, "<input type=\"text\" id=\"code\" name=\"code\"><br><br>");
+    httpd_resp_send_chunk(req, ctm, strlen(ctm));
+    memset(ctm, '\0', 128);
+    strcpy(ctm, "<button type=\"submit\">Set code</button>");
+    httpd_resp_send_chunk(req, ctm, strlen(ctm));
+    memset(ctm, '\0', 128);
+    strcpy(ctm, "</form>");
+    httpd_resp_send_chunk(req, ctm, strlen(ctm));
+
+    return ESP_OK;
+}
+
+static esp_err_t config_post_handler(httpd_req_t *req)
+{
+    char buf[100] = {'\0'};
+    size_t buf_len = req->content_len;
+
+    if(buf_len > 0)
+    {
+        memset(buf, '\0', buf_len+1);
+        httpd_req_recv(req, buf, buf_len);
+        ESP_LOGI(TAG, "POST query => %s", buf);
+        char param[50] = {'\0'};
+        if(httpd_query_key_value(buf, "opt", param, sizeof(param)) == ESP_OK) opt_web = param[0];
+        if(httpd_query_key_value(buf, "code", param, sizeof(param)) == ESP_OK) strcpy(registration_code, param);
+        http_ind = 1;
+    }
+    httpd_resp_send_chunk(req, NULL, 0);
+    return ESP_OK;
+}
+
+static httpd_handle_t start_webserver(void)
+{
+    httpd_handle_t server = NULL;
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+
+    httpd_uri_t config_post =
+    {
+        .uri       = "/config",
+        .method    = HTTP_POST,
+        .handler   = config_post_handler,
+        .user_ctx  = NULL
+    };
+
+    httpd_uri_t config_get =
+    {
+        .uri       = "/config",
+        .method    = HTTP_GET,
+        .handler   = config_get_handler,
+        .user_ctx  = NULL
+    };
+
+    ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
+    if(httpd_start(&server, &config) == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Registering URI handlers");
+        httpd_register_uri_handler(server, &config_post);
+        httpd_register_uri_handler(server, &config_get);
+        return server;
+    }
+
+    ESP_LOGI(TAG, "Error starting server!");
+    return NULL;
+}
+
+static void stop_webserver(httpd_handle_t server)
+{
+    httpd_stop(server);
 }
 
 static void register_on_api()
 {
-    ESP_LOGI(TAG, "Enter the registration code:");
-    uint8_t i;
-    uint8_t state = 0;
-    char code[7] = "";
-    while(1)
+    char reg_code[50] = "";
+    if(http_ind == 0)
     {
-        i = 0;
-        state = 0;
-        memset(code, 0, 7);
-        while(1)
-        {
-            char ch;
-            ch = fgetc(stdin);
-            if(ch != 0xFF)
-            {
-                fputc(ch, stdout);
-                if(ch == '\b'){
-                    fprintf(stdout, "\033[K");
-                }
-                if (ch=='\n')
-                {
-                    break;
-                }
-                else if(ch=='\b')
-                {
-                    if(i > 0)
-                    {
-                        code[--i] = 0;
-                    }
-                }
-                else
-                {
-                    code[i++] = ch;
-                    if(i > 6)
-                    {
-                        fputc('\n', stdout);
-                        break;
-                    }
-                }
-            }
-        }
-        if(i > 0)
-        {
-            for(int j = 0; j < i; j++)
-            {
-                if(!isdigit(code[j]))
-                {
-                    printf("Not digit = %c\n", code[j]);
-                    state = 1;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            state = 1;
-        }
-        if(state == 1)
-        {
-            ESP_LOGI(TAG, "Try again please.");
-        }
-        else
-        {
-            break;
-        }
+        ESP_LOGI(TAG, "Enter the registration code:");
+        int8_t in_opt = -1;
+
+        while(in_opt == -1 && http_ind != 1) in_opt = enter_registration_code(reg_code);
     }
+    stop_webserver(server_code);
+    if(http_ind == 0) strcpy(registration_code, reg_code);
+
+    ESP_LOGI(TAG, "Registration code used: %s", registration_code);
 
     memset(post_data, 0, 200);
     strcat(post_data, "modelo="\
@@ -208,7 +285,7 @@ static void register_on_api()
                       "&cantidadCanales="\
                       RD_CANALES\
                       "&code=");
-    strcat(post_data, code);
+    strcat(post_data, registration_code);
 
     char tmp_str[24] = "";
 
@@ -237,14 +314,22 @@ static void register_on_api()
 void data_register()
 {
     struct stat st;
-    if (stat(FILE_CONFIG, &st) == 0)
+    int8_t opt = -1;
+    char in_opt[1] = "";
+
+    server_code = start_webserver();
+
+    if(stat(FILE_CONFIG, &st) == 0)
     {
         ESP_LOGI(TAG, "There is a previous device configuration. Do you want to load it? (y/n):");
-        char opt = enter_opt();
-        if(opt == 'y')
+        while(opt == -1 && http_ind != 1) opt = enter_opt(in_opt);
+        if(http_ind == 1) in_opt[0] = opt_web;
+        if(in_opt[0] == 'y')
         {
+            stop_webserver(server_code);
             FILE *f  = fopen(FILE_CONFIG, "r");
             fscanf(f, "%[^,],%[^,],%[^,]", apitoken, idcontrolador, database);
+            printf("Token = %s\n", apitoken);
             fclose(f);
             RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
         }
@@ -255,7 +340,7 @@ void data_register()
     }
     else
     {
-        ESP_LOGI(TAG, "There is a no previous device configuration.");
+        ESP_LOGI(TAG, "There is no previous device configuration.");
         register_on_api();
     }
 }
@@ -263,7 +348,7 @@ void data_register()
 void IRAM_ATTR data_task(void *arg)
 {
     struct stat st;
-    if (stat(FILE_TIMESTAMP, &st) == 0)
+    if(stat(FILE_TIMESTAMP, &st) == 0)
     {
         FILE *f  = fopen(FILE_TIMESTAMP, "r");
         fscanf(f, "%llu %u %u", &timestamp_temp, &card_size, &reservation_size);

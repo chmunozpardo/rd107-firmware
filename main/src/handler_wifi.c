@@ -10,20 +10,20 @@ static EventGroupHandle_t s_connect_event_group;
 static uint16_t ap_count = 0;
 static uint16_t number   = DEFAULT_SCAN_LIST_SIZE;
 
-static wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
+static wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE] = {0};
 
 ip4_str ip_addr = {0};
 ip4_str gw_addr = {0};
 uint8_t mac[6]  = {0};
 
 static int8_t opt            = -1;
-static char net_password[50] = "";
 static uint8_t http_ind      =  0;
+static char net_password[50] = "";
 
 static esp_err_t config_get_handler(httpd_req_t *req)
 {
     char ctm[100] = {'\0'};
-    char lel[10] = {'\0'};
+    char lel[4] = {'\0'};
 
     strcpy(ctm, "<form action=\"/config\" method=\"post\">");
     httpd_resp_send_chunk(req, ctm, strlen(ctm));
@@ -35,6 +35,7 @@ static esp_err_t config_get_handler(httpd_req_t *req)
         strcat(ctm, lel);
         strcat(ctm, "\">");
         httpd_resp_send_chunk(req, ctm, strlen(ctm));
+
         memset(ctm, '\0', 100);
         strcpy(ctm, "<label for=\"ssid_");
         sprintf(lel, "%d", i+1);
@@ -44,6 +45,7 @@ static esp_err_t config_get_handler(httpd_req_t *req)
         strcat(ctm, "</label><br>");
         httpd_resp_send_chunk(req, ctm, strlen(ctm));
     }
+    memset(ctm, '\0', 100);
     strcpy(ctm, "<label for=\"pass\">Wifi password:</label>");
     httpd_resp_send_chunk(req, ctm, strlen(ctm));
     memset(ctm, '\0', 100);
@@ -56,34 +58,22 @@ static esp_err_t config_get_handler(httpd_req_t *req)
     strcpy(ctm, "</form>");
     httpd_resp_send_chunk(req, ctm, strlen(ctm));
 
-    if (httpd_req_get_hdr_value_len(req, "Host") == 0) {
-        ESP_LOGI(TAG, "Request headers lost");
-    }
     return ESP_OK;
 }
 
 static esp_err_t config_post_handler(httpd_req_t *req)
 {
     char buf[100] = {'\0'};
-    size_t buf_len;
-    int ret, remaining = req->content_len;
+    size_t buf_len = req->content_len;
 
-    buf_len = remaining;
-    printf("buf_len = %d\n", buf_len);
-    if (buf_len > 0) {
+    if (buf_len > 0)
+    {
         memset(buf, '\0', buf_len+1);
         httpd_req_recv(req, buf, buf_len);
-        ESP_LOGI(TAG, "Found URL query => %s", buf);
+        ESP_LOGI(TAG, "POST query => %s", buf);
         char param[50] = {'\0'};
-        if (httpd_query_key_value(buf, "ssid", param, sizeof(param)) == ESP_OK) {
-            ESP_LOGI(TAG, "Found URL query parameter => ssid=%s", param);
-            opt = atoi(param);
-
-        }
-        if (httpd_query_key_value(buf, "pass", param, sizeof(param)) == ESP_OK) {
-            ESP_LOGI(TAG, "Found URL query parameter => pass=%s", param);
-            strcpy(net_password, param);
-        }
+        if (httpd_query_key_value(buf, "ssid", param, sizeof(param)) == ESP_OK) opt = atoi(param);
+        if (httpd_query_key_value(buf, "pass", param, sizeof(param)) == ESP_OK) strcpy(net_password, param);
         http_ind = 1;
     }
     httpd_resp_send_chunk(req, NULL, 0);
@@ -95,14 +85,16 @@ static httpd_handle_t start_webserver(void)
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
-    httpd_uri_t config_post = {
+    httpd_uri_t config_post =
+    {
         .uri       = "/config",
         .method    = HTTP_POST,
         .handler   = config_post_handler,
         .user_ctx  = NULL
     };
 
-    httpd_uri_t config_get = {
+    httpd_uri_t config_get =
+    {
         .uri       = "/config",
         .method    = HTTP_GET,
         .handler   = config_get_handler,
@@ -125,29 +117,6 @@ static httpd_handle_t start_webserver(void)
 static void stop_webserver(httpd_handle_t server)
 {
     httpd_stop(server);
-}
-
-static void disconnect_handler(void* arg, esp_event_base_t event_base, 
-                               int32_t event_id, void* event_data)
-{
-    httpd_handle_t* server = (httpd_handle_t*) arg;
-    if (*server)
-    {
-        ESP_LOGI(TAG, "Stopping webserver");
-        stop_webserver(*server);
-        *server = NULL;
-    }
-}
-
-static void connect_handler(void* arg, esp_event_base_t event_base, 
-                            int32_t event_id, void* event_data)
-{
-    httpd_handle_t* server = (httpd_handle_t*) arg;
-    if (*server == NULL)
-    {
-        ESP_LOGI(TAG, "Starting webserver");
-        *server = start_webserver();
-    }
 }
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
@@ -174,7 +143,8 @@ static void wifi_init_ap()
 
     wifi_config_t wifi_config =
     {
-        .ap = {
+        .ap =
+        {
             .ssid = "rd107ap2020",
             .ssid_len = strlen("rd107ap2020"),
             .password = "dreamit1q2w3e",
@@ -216,87 +186,61 @@ static void on_wifi_disconnect(void *arg, esp_event_base_t event_base,
 
 static int8_t enter_opt()
 {
-    uint8_t i  = 0;
-    int8_t out = 0;
-    int8_t state;
+    uint8_t i = 0;
     char in_opt[3] = "";
+    char ch;
     while(1)
     {
         if(http_ind == 1) return -1;
-        char ch;
         ch = fgetc(stdin);
         if(ch != 0xFF)
         {
             fputc(ch, stdout);
+            if(ch == '\n') break;
             if(ch == '\b') fprintf(stdout, "\033[K");
-            if (ch == '\n') break;
-            else if(ch == '\b' && i > 0 && i <= 3) in_opt[--i] = 0;
-            else
-            {
-                if(i < 3) in_opt[i] = ch;
-                ++i;
-            }
+            if(ch == '\b' && i > 0 && i <= 3) in_opt[--i] = 0;
+            if(i < 3) in_opt[i++] = ch;
         }
     }
     uint8_t max_i = (i < 50) ? i : 50;
-    if(max_i == 0) state = 1;
     for(int j = 0; j < max_i; j++)
     {
         if(!isdigit(in_opt[j]))
         {
             ESP_LOGE(TAG, "Not a numeric option");
-            out = -1;
-            break;
+            return -1;
         }
     }
-    if(out != -1) out = atoi(in_opt);
-    return out;
+    return atoi(in_opt);
 }
 
 static int8_t enter_password(char *in_opt)
 {
-    uint8_t i;
-    int8_t out = 0;
-    uint8_t state;
-    i = 0;
-    state = 0;
+    memset(in_opt, 0, 50);
+    uint8_t i = 0;
+    char ch;
     while(1)
     {
-        char ch;
         ch = fgetc(stdin);
         if(ch != 0xFF)
         {
             fputc(ch, stdout);
-            if(ch == '\b'){
-                fprintf(stdout, "\033[K");
-            }
-            if (ch == '\n')
-            {
-                break;
-            }
-            else if(ch == '\b')
-            {
-                if(i > 0 && i <= 50) in_opt[--i] = 0;
-            }
-            else
-            {
-                if(i < 50) in_opt[i] = ch;
-                ++i;
-            }
+            if(ch == '\n') break;
+            if(ch == '\b') fprintf(stdout, "\033[K");
+            if(ch == '\b' && i > 0 && i <= 50) in_opt[--i] = 0;
+            if(i < 50) in_opt[i++] = ch;
         }
     }
     uint8_t max_i = (i < 50) ? i : 50;
-    if(max_i == 0) state = 1;
     for(int j = 0; j < max_i; j++)
     {
         if(!isalnum(in_opt[j]))
         {
             ESP_LOGE(TAG, "Not an alphanumeric password");
-            out = -1;
-            break;
+            return -1;
         }
     }
-    return out;
+    return 0;
 }
 
 void wifi_init(void)
@@ -304,7 +248,8 @@ void wifi_init(void)
 
     httpd_handle_t server = NULL;
     esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
@@ -316,8 +261,6 @@ void wifi_init(void)
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    memset(ap_info, 0, sizeof(ap_info));
-
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
@@ -327,7 +270,6 @@ void wifi_init(void)
     for (int i = 0; (i < DEFAULT_SCAN_LIST_SIZE) && (i < ap_count); i++) {
         ESP_LOGI(TAG, "Network option %d: \t%s", i + 1, ap_info[i].ssid);
         //ESP_LOGI(TAG, "RSSI \t\t%d", ap_info[i].rssi);
-        //ESP_LOGI(TAG, "Channel \t\t%d\n", ap_info[i].primary);
     }
 
     ESP_ERROR_CHECK(esp_wifi_stop());
@@ -339,20 +281,15 @@ void wifi_init(void)
 
     int8_t in_opt = -1;
     opt = -1;
-    memset(net_password, 0, 50);
-    while(in_opt == -1)
-    {
-        in_opt = enter_opt();
-        if(http_ind == 1) break;
-    }
+    while(in_opt == -1 && http_ind != 1) in_opt = enter_opt();
 
     if(http_ind == 0) opt = in_opt;
 
     stop_webserver(server);
     wifi_end_ap();
+
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &on_wifi_disconnect, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &on_got_ip, NULL));
-
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
     s_connect_event_group = xEventGroupCreate();
@@ -362,18 +299,15 @@ void wifi_init(void)
         if(http_ind == 0)
         {
             ESP_LOGI(TAG, "Enter password:");
-            int8_t pass_out = -1;
-            while(pass_out == -1)
-            {
-                memset(net_password, 0, 50);
-                pass_out = enter_password(&net_password);
-            }
+            in_opt = -1;
+            while(in_opt == -1) in_opt = enter_password(net_password);
         }
         ESP_LOGI(TAG, "Password used: %s", net_password);
         wifi_config_t wifi_config = {0};
         strcpy((char *)wifi_config.sta.ssid, (char *)ap_info[opt-1].ssid);
         strcpy((char *)wifi_config.sta.password, (char *)net_password);
         ESP_LOGI(TAG, "Connecting to %s...", wifi_config.sta.ssid);
+
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
         ESP_ERROR_CHECK(esp_wifi_start());
@@ -381,8 +315,10 @@ void wifi_init(void)
     }
     else
     {
-        wifi_config_t wifi_config = {
-            .sta = {
+        wifi_config_t wifi_config =
+        {
+            .sta =
+            {
                 .ssid = CONFIG_EXAMPLE_WIFI_SSID,
                 .password = CONFIG_EXAMPLE_WIFI_PASSWORD,
             },

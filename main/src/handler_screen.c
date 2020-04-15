@@ -206,7 +206,7 @@ void screen_init()
     //Turn on the LCD display
     screen_write_byte(0x29);
 
-    screen_clear(WHITE);
+    screen_clear(LCD_BACKGROUND);
 }
 
 /********************************************************************************

@@ -452,13 +452,13 @@ void qr_task(void *arg)
                                                  j*QR_SIZE + QR_OFFSET,
                                              (i+1)*QR_SIZE + QR_OFFSET,
                                              (j+1)*QR_SIZE + QR_OFFSET,
-                                             BLACK, DRAW_FULL, DOT_PIXEL_DFT);
+                                             LCD_BLACK, DRAW_FULL, DOT_PIXEL_DFT);
                         else
                             GUI_DrawRectangle(   i*QR_SIZE + QR_OFFSET,
                                                  j*QR_SIZE + QR_OFFSET,
                                              (i+1)*QR_SIZE + QR_OFFSET,
                                              (j+1)*QR_SIZE + QR_OFFSET,
-                                             WHITE, DRAW_FULL, DOT_PIXEL_DFT);
+                                             LCD_WHITE, DRAW_FULL, DOT_PIXEL_DFT);
                     }
                 }
                 qr_state = 1;
@@ -476,13 +476,13 @@ void qr_task(void *arg)
                                                      j*QR_SIZE + QR_OFFSET,
                                                  (i+1)*QR_SIZE + QR_OFFSET,
                                                  (j+1)*QR_SIZE + QR_OFFSET,
-                                                 BLACK, DRAW_FULL, DOT_PIXEL_DFT);
+                                                 LCD_BLACK, DRAW_FULL, DOT_PIXEL_DFT);
                             else
                                 GUI_DrawRectangle(   i*QR_SIZE + QR_OFFSET,
                                                      j*QR_SIZE + QR_OFFSET,
                                                  (i+1)*QR_SIZE + QR_OFFSET,
                                                  (j+1)*QR_SIZE + QR_OFFSET,
-                                                 WHITE, DRAW_FULL, DOT_PIXEL_DFT);
+                                                 LCD_WHITE, DRAW_FULL, DOT_PIXEL_DFT);
                         }
                     }
                 }

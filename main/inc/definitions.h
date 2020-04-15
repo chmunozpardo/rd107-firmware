@@ -47,11 +47,12 @@
 
 #define LOCAL_TIMEZONE      "<-04>4"
 
-#define URL                 "http://192.168.1.88:8080/control_acceso/obtenerMediosAccesoControladorBinario"
-#define URL_COMMAND         "http://192.168.1.88:8080/control_acceso/obtenerComandosManualesPendientesControlador"
-#define URL_QR              "http://192.168.1.88:8080/control_acceso/obtenerCodigoQR"
-#define URL_RESERVATIONS    "http://192.168.1.88:8080/control_acceso/obtenerReservasBinario"
-#define URL_REG             "http://192.168.1.88:8080/control_acceso/registrarControlador"
+#define HOSTNAME            "http://192.168.1.88:8080/"
+#define URL                 HOSTNAME"control_acceso/obtenerMediosAccesoControladorBinario"
+#define URL_COMMAND         HOSTNAME"control_acceso/obtenerComandosManualesPendientesControlador"
+#define URL_QR              HOSTNAME"control_acceso/obtenerCodigoQR"
+#define URL_RESERVATIONS    HOSTNAME"control_acceso/obtenerReservasBinario"
+#define URL_REG             HOSTNAME"control_acceso/registrarControlador"
 
 #define HTTPS_BUFFER        (4096+0)
 
@@ -88,10 +89,7 @@ typedef struct __attribute__((packed, aligned(1))) reservation_structure{
 typedef union ip4_str
 {
     ip4_addr_t ip_addr_i;
-    struct
-    {
-        uint8_t addr[4];
-    };
+    struct { uint8_t addr[4]; };
 } ip4_str;
 
 #define CARD                    card_structure
@@ -140,9 +138,9 @@ typedef union ip4_str
 #define SCREEN_BUFFER       1024
 
 // WS2812 parameters
-#define RGB_LEDS        14  // Number of pixels
-#define RGB_DATA_N      24  // Total bits per pixel
-#define RGB_RESET_TIME  40  // Reset time
+#define RGB_LEDS            14  // Number of pixels
+#define RGB_DATA_N          24  // Total bits per pixel
+#define RGB_RESET_TIME      40  // Reset time
 
 // Simple color definitions
 #define RGB_RED     255,   0,   0
@@ -152,36 +150,37 @@ typedef union ip4_str
 #define RGB_MAGENTA 181,   0, 181
 #define RGB_YELLOW  181, 181,   0
 #define RGB_WHITE   147, 147, 147
-
-// Screen default values
-#define LCD_BACKGROUND  WHITE //Default background color
-#define FONT_BACKGROUND WHITE //Default font background color
-#define FONT_FOREGROUND GRED  //Default font foreground color
-
-// Screen colors
-#define WHITE   0xFFFF
-#define BLACK   0x0000
-#define BLUE    0x001F
-#define BRED    0XF81F
-#define GRED    0XFFE0
-#define GBLUE   0X07FF
-#define RED     0xF800
-#define MAGENTA 0xF81F
-#define GREEN   0x07E0
-#define CYAN    0x7FFF
-#define YELLOW  0xFFE0
-#define BROWN   0XBC40
-#define BRRED   0XFC07
-#define GRAY    0X8430
+#define RGB_ORANGE  255, 165,   0
 
 #define RGB_IDLE      RGB_CYAN
+
+// Screen default values
+#define LCD_BACKGROUND  LCD_WHITE //Default background color
+#define FONT_BACKGROUND LCD_WHITE //Default font background color
+#define FONT_FOREGROUND LCD_GRED  //Default font foreground color
+
+// Screen colors
+#define LCD_WHITE   0xFFFF
+#define LCD_BLACK   0x0000
+#define LCD_BLUE    0x001F
+#define LCD_BRED    0XF81F
+#define LCD_GRED    0XFFE0
+#define LCD_GBLUE   0X07FF
+#define LCD_RED     0xF800
+#define LCD_MAGENTA 0xF81F
+#define LCD_GREEN   0x07E0
+#define LCD_CYAN    0x7FFF
+#define LCD_YELLOW  0xFFE0
+#define LCD_BROWN   0XBC40
+#define LCD_BRRED   0XFC07
+#define LCD_GRAY    0X8430
 
 #define WIEGAND_D0    14
 #define WIEGAND_D1    17
 
 #define ESP_INTR_FLAG_DEFAULT          0
-#define CONFIG_ESP_TASK_WDT_TIMEOUT_MS 5
 #define DEFAULT_SCAN_LIST_SIZE         20
+#define CONFIG_ESP_TASK_WDT_TIMEOUT_MS 5
 
 extern char apitoken[30];
 extern char database[20];

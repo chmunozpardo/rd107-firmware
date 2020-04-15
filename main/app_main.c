@@ -13,7 +13,7 @@
 #include "handler_wifi.h"
 #include "Waveshare_ILI9486.h"
 
-static const char* TAG = "app_main";
+//static const char* TAG = "app_main";
 
 uint32_t reservation_size = 0;
 uint32_t card_size   = 0;
