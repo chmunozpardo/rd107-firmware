@@ -30,7 +30,7 @@ void IRAM_ATTR search_card(uint8_t size, uint64_t value)
 
     xSemaphoreTake(reg_semaphore, portMAX_DELAY);
     f = fopen(FILE_CARDS, "r");
-    ESP_LOGI(TAG, "Searching card %u, [%u,%u] in database", inputCard.cardType, inputCard.code1, inputCard.code2);
+    ESP_LOGD(TAG, "Searching card %u, [%u,%u] in database", inputCard.cardType, inputCard.code1, inputCard.code2);
 
     if(f == NULL)
     {
@@ -53,12 +53,12 @@ void IRAM_ATTR search_card(uint8_t size, uint64_t value)
 
     if(status)
     {
-        ESP_LOGI(TAG, " --> Card found <--");
+        ESP_LOGD(TAG, " --> Card found <--");
         RGB_SIGNAL(RGB_GREEN, RGB_LEDS, 1);
     }
     else
     {
-        ESP_LOGI(TAG, " --> Card not found <--");
+        ESP_LOGD(TAG, " --> Card not found <--");
         RGB_SIGNAL(RGB_RED, RGB_LEDS, 1);
     }
     RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
@@ -68,7 +68,7 @@ void IRAM_ATTR search_reservation_qr(char *qr)
 {
     xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
     f = fopen(FILE_RESERVATIONS, "r");
-    ESP_LOGI(TAG, "Searching reservation QR %s in database", qr);
+    ESP_LOGD(TAG, "Searching reservation QR %s in database", qr);
 
     if(f == NULL)
     {
@@ -91,12 +91,12 @@ void IRAM_ATTR search_reservation_qr(char *qr)
 
     if(status == 0)
     {
-        ESP_LOGI(TAG, " --> Reservation found <--");
+        ESP_LOGD(TAG, " --> Reservation found <--");
         RGB_SIGNAL(RGB_GREEN, RGB_LEDS, 1);
     }
     else
     {
-        ESP_LOGI(TAG, " --> Reservation not found <--");
+        ESP_LOGD(TAG, " --> Reservation not found <--");
         RGB_SIGNAL(RGB_RED, RGB_LEDS, 1);
     }
     RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
@@ -106,7 +106,7 @@ void IRAM_ATTR search_reservation_code(char *code)
 {
     xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
     f = fopen(FILE_RESERVATIONS, "r");
-    ESP_LOGI(TAG, "Searching reservation code %s in database", code);
+    ESP_LOGD(TAG, "Searching reservation code %s in database", code);
 
     if(f == NULL)
     {
@@ -129,12 +129,12 @@ void IRAM_ATTR search_reservation_code(char *code)
 
     if(status == 0)
     {
-        ESP_LOGI(TAG, " --> Reservation found <--");
+        ESP_LOGD(TAG, " --> Reservation found <--");
         RGB_SIGNAL(RGB_GREEN, RGB_LEDS, 1);
     }
     else
     {
-        ESP_LOGI(TAG, " --> Reservation not found <--");
+        ESP_LOGD(TAG, " --> Reservation not found <--");
         RGB_SIGNAL(RGB_RED, RGB_LEDS, 1);
     }
     RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);

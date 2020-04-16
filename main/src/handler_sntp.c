@@ -4,12 +4,6 @@ static const char *TAG = "sntp_handler";
 
 time_t system_now = 0;
 
-char strftime_buf[32];
-char strftime_buf_end[32];
-
-static struct tm timeinfo = {0};
-static int retry          =  0 ;
-
 static void time_sync_notification_cb(struct timeval *tv)
 {
     ESP_LOGI(TAG, "NTP synchronized");
@@ -18,6 +12,10 @@ static void time_sync_notification_cb(struct timeval *tv)
 
 void ntp_init(void)
 {
+    int retry             =  0 ;
+    char strftime_buf[32] = {0};
+    struct tm timeinfo    = {0};
+
     ESP_LOGI(TAG, "Initializing SNTP");
     setenv("TZ", LOCAL_TIMEZONE, 1);
     tzset();

@@ -38,7 +38,29 @@
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
 
-#include "cJSON.h"
+#include "fonts.h"
+
+#define COLOR           uint16_t
+#define POINT           uint16_t
+#define LENGTH          uint16_t
+
+#define LCD_X_MAXPIXEL  480
+#define LCD_Y_MAXPIXEL  320
+#define LCD_X           0
+#define LCD_Y           0
+
+#define LCD_WIDTH       (LCD_X_MAXPIXEL - 2 * LCD_X)
+#define LCD_HEIGHT      (LCD_Y_MAXPIXEL)
+
+#define LOW_Speed_Show  0
+#define HIGH_Speed_Show 1
+
+#define SCAN_DIR_DFT    D2U_L2R
+#define DOT_STYLE_DFT   DOT_FILL_AROUND
+#define DOT_PIXEL_DFT   DOT_PIXEL_1X1
+
+#define WIFI_WEBSERVER      0
+#define REG_WEBSERVER       1
 
 #define RD_MODELO           "RD-107"
 #define RD_VERSION          "0.1"
@@ -54,11 +76,12 @@
 #define URL_RESERVATIONS    HOSTNAME"control_acceso/obtenerReservasBinario"
 #define URL_REG             HOSTNAME"control_acceso/registrarControlador"
 
-#define HTTPS_BUFFER        (4096+0)
+#define HTTPS_BUFFER        (4096)
 
 #define FILE_JSON           "/spiffs/registers.json"
 #define FILE_CARDS          "/spiffs/registers.db"
 #define FILE_RESERVATIONS   "/spiffs/reservations.db"
+
 #define FILE_CONFIG         "/spiffs/config.txt"
 #define FILE_WIFI           "/spiffs/wifi.txt"
 #define FILE_TIMESTAMP      "/spiffs/timestamp.txt"
@@ -68,32 +91,8 @@
 #define BUZZER_GPIO         21
 #define RELAY_GPIO          22
 
-typedef struct __attribute__((packed, aligned(1))) card_structure{
-    uint8_t cardType;
-    uint8_t permisos;
-    uint8_t antipassbackStatus;
-    uint16_t canalHorario;
-    uint32_t code1;
-    uint32_t code2;
-    uint32_t index;
-} card_structure;
-
-typedef struct __attribute__((packed, aligned(1))) reservation_structure{
-    char qr[8];
-    char code[6];
-    uint64_t init_time;
-    uint64_t end_time;
-    uint32_t index;
-} reservation_structure;
-
-typedef union ip4_str
-{
-    ip4_addr_t ip_addr_i;
-    struct { uint8_t addr[4]; };
-} ip4_str;
-
-#define CARD                    card_structure
-#define RESERVATION             reservation_structure
+#define CARD                    card_t
+#define RESERVATION             reservation_t
 
 #define CARD_SIZE               sizeof(CARD)
 #define CARD_READER_SIZE        (2048)
@@ -157,23 +156,26 @@ typedef union ip4_str
 // Screen default values
 #define LCD_BACKGROUND  LCD_WHITE //Default background color
 #define FONT_BACKGROUND LCD_WHITE //Default font background color
-#define FONT_FOREGROUND LCD_GRED  //Default font foreground color
+#define FONT_FOREGROUND LCD_BLACK  //Default font foreground color
 
 // Screen colors
 #define LCD_WHITE   0xFFFF
 #define LCD_BLACK   0x0000
 #define LCD_BLUE    0x001F
+#define LCD_GREEN   0x07E0
+#define LCD_RED     0xF800
 #define LCD_BRED    0XF81F
 #define LCD_GRED    0XFFE0
 #define LCD_GBLUE   0X07FF
-#define LCD_RED     0xF800
 #define LCD_MAGENTA 0xF81F
-#define LCD_GREEN   0x07E0
 #define LCD_CYAN    0x7FFF
 #define LCD_YELLOW  0xFFE0
 #define LCD_BROWN   0XBC40
 #define LCD_BRRED   0XFC07
 #define LCD_GRAY    0X8430
+
+#define LCD_LOGO_TOP    0x0376
+#define LCD_LOGO_BOT    0x028C
 
 #define WIEGAND_D0    14
 #define WIEGAND_D1    17
@@ -182,12 +184,148 @@ typedef union ip4_str
 #define DEFAULT_SCAN_LIST_SIZE         20
 #define CONFIG_ESP_TASK_WDT_TIMEOUT_MS 5
 
+#define MAX_HEIGHT_FONT         24
+#define MAX_WIDTH_FONT          17
+#define OFFSET_BITMAP           54
+
+typedef struct _tFont
+{
+    const uint8_t *table;
+    uint16_t Width;
+    uint16_t Height;
+} sFONT;
+
+typedef enum {
+    DOT_PIXEL_1X1 = 1,
+    DOT_PIXEL_2X2,
+    DOT_PIXEL_3X3,
+    DOT_PIXEL_4X4,
+    DOT_PIXEL_5X5,
+    DOT_PIXEL_6X6,
+    DOT_PIXEL_7X7,
+    DOT_PIXEL_8X8,
+} DOT_PIXEL;
+
+typedef enum {
+    DOT_FILL_AROUND = 1,
+    DOT_FILL_RIGHTUP,
+} DOT_STYLE;
+
+typedef enum {
+    LINE_SOLID = 0,
+    LINE_DOTTED,
+} LINE_STYLE;
+
+typedef enum {
+    DRAW_EMPTY = 0,
+    DRAW_FULL,
+} DRAW_FILL;
+
+typedef struct {
+    uint16_t Year;
+    uint8_t  Month;
+    uint8_t  Day;
+    uint8_t  Hour;
+    uint8_t  Min;
+    uint8_t  Sec;
+} DEV_TIME;
+
+typedef enum {
+    L2R_U2D = 0,
+    L2R_D2U,
+    R2L_U2D,
+    R2L_D2U,
+
+    U2D_L2R,
+    U2D_R2L,
+    D2U_L2R,
+    D2U_R2L,
+} LCD_SCAN_DIR;
+
+typedef struct {
+    POINT Xpoint0;
+    POINT Ypoint0;
+    POINT Xpoint;
+    POINT Ypoint;
+    unsigned char chStatus;
+    unsigned char chType;
+    int iXoff;
+    int iYoff;
+    float fXfac;
+    float fYfac;
+    LCD_SCAN_DIR TP_Scan_Dir;
+}TP_DEV;
+
+typedef struct{
+    POINT Xpoint;
+    POINT Ypoint;
+    COLOR Color;
+    DOT_PIXEL DotPixel; 
+}TP_DRAW;
+
+typedef struct {
+    LENGTH LCD_Dis_Column;
+    LENGTH LCD_Dis_Page;
+    LCD_SCAN_DIR LCD_Scan_Dir;
+    POINT LCD_X_Adjust;
+    POINT LCD_Y_Adjust;
+} LCD_DIS;
+
+typedef struct __attribute__((packed, aligned(1))) card_structure{
+    uint8_t cardType;
+    uint8_t permisos;
+    uint8_t antipassbackStatus;
+    uint16_t canalHorario;
+    uint32_t code1;
+    uint32_t code2;
+    uint32_t index;
+} card_t;
+
+typedef struct __attribute__((packed, aligned(1))) reservation_structure{
+    char qr[8];
+    char code[6];
+    uint64_t init_time;
+    uint64_t end_time;
+    uint32_t index;
+} reservation_t;
+
+typedef union ip4_str
+{
+    ip4_addr_t ip_addr_i;
+    struct { uint8_t addr[4]; };
+} ip4_str;
+
+typedef struct wifi_context
+{
+    char *wifi_password;
+    int8_t *opt;
+    uint16_t *ap_count;
+    wifi_ap_record_t *ap_info;
+    uint8_t *http_ind;
+} wifi_context_t;
+
+typedef struct reg_context
+{
+    char *registration_code;
+    char *opt_web;
+    uint8_t *http_ind;
+} reg_context_t;
+
+extern sFONT Font24;
+extern sFONT Font20;
+extern sFONT Font16;
+extern sFONT Font12;
+extern sFONT Font8;
+
+extern sFONT dreamit_LOGO_Top;
+extern sFONT dreamit_LOGO_Bot;
+
+extern DEV_TIME sDev_time;
+
 extern char apitoken[30];
 extern char database[20];
 extern char idcontrolador[3];
-
-extern char strftime_buf[32];
-extern char strftime_buf_end[32];
+extern char wifi_ssid[30];
 
 extern ip4_str ip_addr;
 extern ip4_str gw_addr;

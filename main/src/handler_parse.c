@@ -2,10 +2,10 @@
 
 static const char* TAG = "parse_handler";
 
-static DRAM_ATTR char line[10]      =   "";
-static DRAM_ATTR uint32_t count     =    0;
-static DRAM_ATTR uint32_t new_regs  =    0;
-static DRAM_ATTR uint32_t read_size =    0;
+static DRAM_ATTR char line[10]      = "";
+static DRAM_ATTR uint32_t count     =  0;
+static DRAM_ATTR uint32_t new_regs  =  0;
+static DRAM_ATTR uint32_t read_size =  0;
 static FILE *f = NULL;
 static FILE *g = NULL;
 
@@ -17,7 +17,6 @@ void parse_register(void)
         ESP_LOGE(TAG, "Failed to open file for reading");
         return;
     }
-
     fscanf(f, " {\"apitoken\":\"%[^,\"]\",\"base_datos\":\"%[^,\"]\",\"idDevice\":%[^,\"],\"estado\":\"OK\"}",
         apitoken,
         database,
@@ -47,7 +46,7 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
             {
                 if(input[i].index == card_data[j].index)
                 {
-                    ESP_LOGI(TAG, "Modified old register");
+                    ESP_LOGD(TAG, "Modified old register");
                     fseek(f, j*CARD_SIZE, pos_save);
                     fwrite(&(input[i]), CARD_SIZE, 1, f);
                     check = 1;
@@ -56,7 +55,7 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
             }
         }
         if(check == 0){
-            ESP_LOGI(TAG, "Inserted new register");
+            ESP_LOGD(TAG, "Inserted new register");
             fwrite(&(input[i]), CARD_SIZE, 1, f);
             ++card_size;
         }
@@ -85,7 +84,7 @@ static IRAM_ATTR void parse_insert_reservation(RESERVATION *input, uint32_t read
             {
                 if(input[i].index == card_data[j].index)
                 {
-                    ESP_LOGI(TAG, "Modified old reservation");
+                    ESP_LOGD(TAG, "Modified old reservation");
                     fseek(f, j*RESERVATION_SIZE, pos_save);
                     fwrite(&(input[i]), RESERVATION_SIZE, 1, f);
                     check = 1;
@@ -94,7 +93,7 @@ static IRAM_ATTR void parse_insert_reservation(RESERVATION *input, uint32_t read
             }
         }
         if(check == 0){
-            ESP_LOGI(TAG, "Inserted new reservation");
+            ESP_LOGD(TAG, "Inserted new reservation");
             fwrite(&(input[i]), RESERVATION_SIZE, 1, f);
             ++reservation_size;
         }
@@ -149,7 +148,7 @@ void IRAM_ATTR parse_qr(void)
     fscanf(f, " {\"estado\":\"OK\",\"data\":\"%6s\"}", qr_placeholder);
     if(strcmp(screen_qr, qr_placeholder) != 0)
     {
-        ESP_LOGI(TAG, "QR Code = %s", qr_placeholder);
+        ESP_LOGD(TAG, "QR Code = %s", qr_placeholder);
         strcpy(screen_qr, qr_placeholder);
         QR_SIGNAL();
     }
@@ -170,8 +169,8 @@ void IRAM_ATTR parse_data(void)
 
     if(new_regs > 0)
     {
-        ESP_LOGI(TAG, "New registers size = %d", new_regs);
-        ESP_LOGI(TAG, "Importing registers...");
+        ESP_LOGD(TAG, "New registers size = %d", new_regs);
+        ESP_LOGD(TAG, "Importing registers...");
         if(timestamp > 0)
         {
             count = new_regs / COPY_SIZE;
@@ -202,17 +201,17 @@ void IRAM_ATTR parse_data(void)
             fclose(g);
             xSemaphoreGive(reg_semaphore);
         }
-        ESP_LOGI(TAG, "Finished importing registers");
+        ESP_LOGD(TAG, "Finished importing registers");
     }
     else
     {
         RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
-        ESP_LOGI(TAG, "No new registers");
+        ESP_LOGD(TAG, "No new registers");
     }
 
     fscanf(f, " ,\"currentTimestamp\":%llu},\"estado\":%[^}]", &timestamp_temp, line);
-    ESP_LOGI(TAG, "Timestamp = %llu", timestamp_temp);
-    ESP_LOGI(TAG, "Status = %s", line);
+    ESP_LOGD(TAG, "Timestamp = %llu", timestamp_temp);
+    ESP_LOGD(TAG, "Status = %s", line);
 
     g = fopen(FILE_TIMESTAMP, "w");
     fprintf(g, "%llu %u %u", timestamp_temp, card_size, reservation_size);
@@ -234,8 +233,8 @@ void IRAM_ATTR parse_reservations(void)
 
     if(new_regs > 0)
     {
-        ESP_LOGI(TAG, "New reservations size = %d", new_regs);
-        ESP_LOGI(TAG, "Importing reservations...");
+        ESP_LOGD(TAG, "New reservations size = %d", new_regs);
+        ESP_LOGD(TAG, "Importing reservations...");
         if(timestamp > 0)
         {
             count = new_regs / COPY_SIZE;
@@ -266,17 +265,17 @@ void IRAM_ATTR parse_reservations(void)
             fclose(g);
             xSemaphoreGive(reservation_semaphore);
         }
-        ESP_LOGI(TAG, "Finished importing reservations");
+        ESP_LOGD(TAG, "Finished importing reservations");
     }
     else
     {
         RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
-        ESP_LOGI(TAG, "No new reservations");
+        ESP_LOGD(TAG, "No new reservations");
     }
 
     fscanf(f, " ,\"currentTimestamp\":%llu},\"estado\":%[^}]", &timestamp_temp, line);
-    ESP_LOGI(TAG, "Timestamp = %llu", timestamp_temp);
-    ESP_LOGI(TAG, "Status = %s", line);
+    ESP_LOGD(TAG, "Timestamp = %llu", timestamp_temp);
+    ESP_LOGD(TAG, "Status = %s", line);
 
     g = fopen(FILE_TIMESTAMP, "w");
     fprintf(g, "%llu %u %u", timestamp_temp, card_size, reservation_size);

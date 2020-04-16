@@ -18,7 +18,7 @@ void buzzer_task(void *arg)
     {
         if(xQueueReceive(buzzer_task_queue, &status, portMAX_DELAY))
         {
-            ESP_LOGI(TAG, "MAKE SOME NOISEEEE!!!");
+            ESP_LOGD(TAG, "MAKE SOME NOISEEEE!!!");
             gpio_set_level(BUZZER_GPIO, 1);
             if(status != 0) vTaskDelay(status*1000/portTICK_PERIOD_MS);
             gpio_set_level(BUZZER_GPIO, 0);

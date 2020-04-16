@@ -2,8 +2,7 @@
 #include "handler_data.h"
 #include "handler_parse.h"
 #include "handler_search.h"
-
-static esp_err_t _http_event_handle(esp_http_client_event_t *evt);
+#include "Waveshare_ILI9486.h"
 
 static const char *TAG            = "data_handler";
 static const char *TAG_HTTPS      = "http_handler";
@@ -14,9 +13,7 @@ DRAM_ATTR char apitoken[30]     = {0};
 DRAM_ATTR char database[20]     = {0};
 DRAM_ATTR char idcontrolador[3] = {0};
 
-static char opt_web               =  0;
-static uint8_t http_ind           =  0;
-static char registration_code[50] = "";
+static uint8_t http_ind =  0;
 
 static httpd_handle_t server_code = NULL;
 
@@ -32,20 +29,20 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
     switch(evt->event_id)
     {
         case HTTP_EVENT_ERROR:
-            ESP_LOGI(TAG_HTTPS, "ERROR");
+            ESP_LOGD(TAG_HTTPS, "ERROR");
             break;
         case HTTP_EVENT_ON_CONNECTED:
-            ESP_LOGI(TAG_HTTPS, "CONNECTED");
+            ESP_LOGD(TAG_HTTPS, "CONNECTED");
             break;
         case HTTP_EVENT_HEADER_SENT:
-            //ESP_LOGI(TAG_HTTPS, "HEADER_SENT");
+            ESP_LOGD(TAG_HTTPS, "HEADER_SENT");
             break;
         case HTTP_EVENT_ON_HEADER:
-            //ESP_LOGI(TAG_HTTPS, "HEADER");
+            ESP_LOGD(TAG_HTTPS, "HEADER");
             printf("%.*s", evt->data_len, (char*)evt->data);
             break;
         case HTTP_EVENT_ON_DATA:
-            ESP_LOGI(TAG_HTTPS, "DATA, len=%d", evt->data_len);
+            ESP_LOGD(TAG_HTTPS, "DATA, len=%d", evt->data_len);
             FILE *f;
             //printf("%.*s\n", evt->data_len, (char*)evt->data);
             f = fopen(FILE_JSON, "a+");
@@ -58,10 +55,10 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
             fclose(f);
             break;
         case HTTP_EVENT_ON_FINISH:
-            //ESP_LOGI(TAG_HTTPS, "FINISH");
+            ESP_LOGD(TAG_HTTPS, "FINISH");
             break;
         case HTTP_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG_HTTPS, "DISCONNECTED");
+            ESP_LOGD(TAG_HTTPS, "DISCONNECTED");
             break;
     }
     return ESP_OK;
@@ -85,7 +82,7 @@ static void data_client_set(void *func, const char *url)
 
     if(err == ESP_OK)
     {
-        ESP_LOGI(
+        ESP_LOGD(
             TAG_HTTPS, "Status = %d, content_length = %d",
             esp_http_client_get_status_code(client),
             esp_http_client_get_content_length(client)
@@ -155,121 +152,7 @@ static int8_t enter_registration_code(char *in_opt)
     return 0;
 }
 
-static esp_err_t config_get_handler(httpd_req_t *req)
-{
-    char ctm[128] = {'\0'};
-
-    char chunk[1024];
-    size_t read_bytes;
-
-    int fd = open("/www/head.html", O_RDONLY, 0);
-    if (fd == -1)
-    {
-        ESP_LOGE(TAG, "Failed to open file : /www/head.html");
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
-        return ESP_FAIL;
-    }
-
-    httpd_resp_set_type(req, "text/html");
-
-    do {
-        read_bytes = read(fd, chunk, 1024);
-        if (read_bytes == -1)
-        {
-            ESP_LOGE(TAG, "Failed to read file : /www/head.html");
-        }
-        else if (read_bytes > 0)
-        {
-            if (httpd_resp_send_chunk(req, chunk, read_bytes) != ESP_OK)
-            {
-                close(fd);
-                ESP_LOGE(TAG, "File sending failed!");
-                httpd_resp_sendstr_chunk(req, NULL);
-                httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
-                return ESP_FAIL;
-            }
-        }
-    } while (read_bytes > 0);
-    close(fd);
-
-    strcpy(ctm, "<form action=/config method=post>");
-    httpd_resp_send_chunk(req, ctm, strlen(ctm));
-    memset(ctm, '\0', 128);
-    struct stat st;
-    if (stat(FILE_CONFIG, &st) == 0)
-    {
-        strcpy(ctm, "<label for=opt>There is a previous device configuration. Do you want to load it?</label><br>");
-        httpd_resp_send_chunk(req, ctm, strlen(ctm));
-        memset(ctm, '\0', 128);
-        strcpy(ctm, "<div class=gr-in><div class=in-gr><input class=opt type=radio name=opt value=y><label for=opt>Yes</label></div>");
-        httpd_resp_send_chunk(req, ctm, strlen(ctm));
-        memset(ctm, '\0', 128);
-        strcpy(ctm, "<div class=in-gr><input class=opt type=radio name=opt value=n><label for=opt>No</label></div></div>");
-        httpd_resp_send_chunk(req, ctm, strlen(ctm));
-        memset(ctm, '\0', 128);
-    }
-    else
-    {
-        strcpy(ctm, "<label for=opt>There is no previous device configuration.</label><br>");
-        httpd_resp_send_chunk(req, ctm, strlen(ctm));
-        memset(ctm, '\0', 128);
-    }
-    strcpy(ctm, "<label for=code>Enter registration code:</label><br><br>");
-    httpd_resp_send_chunk(req, ctm, strlen(ctm));
-    memset(ctm, '\0', 128);
-    strcpy(ctm, "<input class=opt type=number maxlength=6 id=code name=code><button class=opt type=submit>Set configuration</button></form>");
-    httpd_resp_send_chunk(req, ctm, strlen(ctm));
-
-    fd = open("/www/end.html", O_RDONLY, 0);
-    if (fd == -1)
-    {
-        ESP_LOGE(TAG, "Failed to open file : /www/end.html");
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
-        return ESP_FAIL;
-    }
-
-    do {
-        read_bytes = read(fd, chunk, 1024);
-        if (read_bytes == -1)
-        {
-            ESP_LOGE(TAG, "Failed to read file : /www/end.html");
-        } else if (read_bytes > 0)
-        {
-            if (httpd_resp_send_chunk(req, chunk, read_bytes) != ESP_OK)
-            {
-                close(fd);
-                ESP_LOGE(TAG, "File sending failed!");
-                httpd_resp_sendstr_chunk(req, NULL);
-                httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
-                return ESP_FAIL;
-            }
-        }
-    } while (read_bytes > 0);
-    close(fd);
-
-    return ESP_OK;
-}
-
-static esp_err_t config_post_handler(httpd_req_t *req)
-{
-    char buf[100] = {'\0'};
-    size_t buf_len = req->content_len;
-
-    if(buf_len > 0)
-    {
-        memset(buf, '\0', buf_len+1);
-        httpd_req_recv(req, buf, buf_len);
-        ESP_LOGI(TAG, "POST query => %s", buf);
-        char param[50] = {'\0'};
-        if(httpd_query_key_value(buf, "opt", param, sizeof(param)) == ESP_OK) opt_web = param[0];
-        if(httpd_query_key_value(buf, "code", param, sizeof(param)) == ESP_OK) strcpy(registration_code, param);
-        http_ind = 1;
-    }
-    httpd_resp_send_chunk(req, NULL, 0);
-    return ESP_OK;
-}
-
-static void register_on_api()
+static void register_on_api(char *registration_code)
 {
     char reg_code[50] = "";
     if(http_ind == 0)
@@ -325,8 +208,27 @@ void data_register()
     struct stat st;
     int8_t opt = -1;
     char in_opt[1] = "";
+    char opt_web   = 0;
 
-    server_code = start_webserver(config_get_handler, config_post_handler);
+    char registration_code[50] = "";
+
+    reg_context_t server_context =
+    {
+        .registration_code = registration_code,
+        .opt_web           = &opt_web,
+        .http_ind          = &http_ind,
+    };
+    server_code = start_webserver(REG_WEBSERVER, &server_context);
+
+    char screen_str[128] = "Connect to\n";
+    char tmp_str[24]     = "";
+    sprintf(tmp_str,"%u.%u.%u.%u", ip_addr.addr[0], ip_addr.addr[1], ip_addr.addr[2], ip_addr.addr[3]);
+    strcat(screen_str, wifi_ssid);
+    strcat(screen_str, "\nand browse to\n");
+    strcat(screen_str, tmp_str);
+    strcat(screen_str, "/config\nto configure this device");
+
+    screen_printf(screen_str);
 
     if(stat(FILE_CONFIG, &st) == 0)
     {
@@ -343,13 +245,13 @@ void data_register()
         }
         else
         {
-            register_on_api();
+            register_on_api(registration_code);
         }
     }
     else
     {
         ESP_LOGI(TAG, "There is no previous device configuration.");
-        register_on_api();
+        register_on_api(registration_code);
     }
 }
 
@@ -361,7 +263,6 @@ void IRAM_ATTR data_task(void *arg)
         FILE *f  = fopen(FILE_TIMESTAMP, "r");
         fscanf(f, "%llu %u %u", &timestamp_temp, &card_size, &reservation_size);
         fclose(f);
-
         ESP_LOGI(TAG, "Loaded data");
         RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
     }
@@ -393,7 +294,6 @@ void IRAM_ATTR data_task(void *arg)
         strcat(post_data, lastTimestamp);
 
         ESP_LOGI(TAG, "Last timestamp = %llu | Total registers = %u | Total reservations = %u", timestamp, card_size, reservation_size);
-
 
         data_client_set(&parse_data, URL);
         data_client_set(&parse_reservations, URL_RESERVATIONS);

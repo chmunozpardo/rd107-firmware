@@ -3,20 +3,21 @@
 static const char* TAG = "spi_handler";
 
 static esp_err_t ret;
+
 static spi_device_handle_t spi_rgb;
 static spi_device_handle_t spi_screen;
+
 static spi_transaction_t t_rgb;
 static spi_transaction_t t_rgb_delay;
 static spi_transaction_t t_screen_8b;
 static spi_transaction_t t_screen_16b;
 
-static uint8_t tx_data_8b[3] = {0};
-static uint8_t rx_data_8b[3] = {0};
+static uint32_t tx_data_8b[3] = {0};
+static uint32_t rx_data_8b[3] = {0};
 
+DRAM_ATTR uint8_t data_rgb                    =  0 ;
+DRAM_ATTR uint8_t array_rgb[24]               = {0};
 DRAM_ATTR uint16_t tx_data_16b[SCREEN_BUFFER] = {0};
-
-DRAM_ATTR uint8_t array_rgb[24] = {0};
-uint8_t data_rgb                =  0 ;
 
 void spi_init()
 {
@@ -83,14 +84,14 @@ void spi_init()
     };
 
     ESP_LOGI(TAG, "Initializing SPI for RGB");
-    ret = spi_bus_initialize(VSPI_HOST, &buscfg_rgb, 1);
+    ret = spi_bus_initialize(VSPI_HOST, &buscfg_rgb, 2);
     ESP_ERROR_CHECK(ret);
 
     ret = spi_bus_add_device(VSPI_HOST, &devcfg_rgb, &spi_rgb);
     ESP_ERROR_CHECK(ret);
 
     ESP_LOGI(TAG, "Initializing SPI for TOUCH");
-    ret = spi_bus_initialize(HSPI_HOST, &buscfg_screen, 2);
+    ret = spi_bus_initialize(HSPI_HOST, &buscfg_screen, 1);
     ESP_ERROR_CHECK(ret);
 
     ret = spi_bus_add_device(HSPI_HOST, &devcfg_screen, &spi_screen);
@@ -115,10 +116,7 @@ void rgb_spi_transmit(void)
 
 void rgb_spi_delay(void)
 {
-    for(int j = 0; j < RGB_RESET_TIME; j++)
-    {
-        ret = spi_device_polling_transmit(spi_rgb, &t_rgb_delay);
-    }
+    for(int j = 0; j < RGB_RESET_TIME; j++) ret = spi_device_polling_transmit(spi_rgb, &t_rgb_delay);
 }
 
 void screen_write_byte(uint8_t Data)
@@ -151,7 +149,7 @@ void screen_write_word(uint16_t Data, uint32_t DataLen)
     gpio_set_level(LCD_PIN_CS, 1);
 }
 
-uint16_t SPI4W_Read_Byte(uint8_t Data)
+uint16_t screen_read_byte(uint8_t Data)
 {
     uint8_t a0 = 0;
     uint8_t a1 = 0;

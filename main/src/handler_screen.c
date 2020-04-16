@@ -3,10 +3,6 @@
 
 LCD_DIS sLCD_DIS;
 
-/*******************************************************************************
-function:
-        Common register initialization
-*******************************************************************************/
 static void screen_init_reg(void)
 {
     screen_write_byte(0XF9);

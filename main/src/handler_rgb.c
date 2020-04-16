@@ -5,7 +5,6 @@ static const char* TAG = "rgb_handler";
 
 static uint8_t status[5] = {0};
 
-extern uint8_t data_rgb ;
 extern DRAM_ATTR uint8_t array_rgb[24];
 
 static void rgb_ws2812(uint8_t r, uint8_t g, uint8_t b)
@@ -40,7 +39,7 @@ void rgb_task(void *arg)
     {
         if(xQueueReceive(rgb_task_queue, &status, portMAX_DELAY))
         {
-            ESP_LOGI(TAG, "Setting LEDs value to [R, G, B] = [%u, %u, %u]", status[0], status[1], status[2]);
+            ESP_LOGD(TAG, "Setting LEDs value to [R, G, B] = [%u, %u, %u]", status[0], status[1], status[2]);
             rgb_fixed_leds(status[0], status[1], status[2], status[3]);
             if(status[4] != 0) vTaskDelay(status[4]*1000/portTICK_PERIOD_MS);
         }

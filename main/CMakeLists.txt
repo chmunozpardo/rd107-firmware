@@ -15,6 +15,7 @@ idf_component_register(SRCS
                     "src/handler_screen.c"
                     "src/handler_search.c"
                     "src/handler_wiegand.c"
+                    "src/Fonts/logo.c"
                     "src/Fonts/font8.c"
                     "src/Fonts/font12.c"
                     "src/Fonts/font16.c"

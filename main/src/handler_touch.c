@@ -29,7 +29,7 @@ static uint16_t TP_Read_ADC(unsigned char CMD)
 {
     uint16_t Data = 0;
 
-    Data = SPI4W_Read_Byte(CMD);
+    Data = screen_read_byte(CMD);
 
     return Data;
 }

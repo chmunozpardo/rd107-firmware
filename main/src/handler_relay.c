@@ -18,7 +18,7 @@ void relay_task(void *arg)
     {
         if(xQueueReceive(relay_task_queue, &status, portMAX_DELAY))
         {
-            ESP_LOGI(TAG, "Opening relay");
+            ESP_LOGD(TAG, "Opening relay");
             gpio_set_level(RELAY_GPIO, 1);
             if(status != 0) vTaskDelay(status*1000/portTICK_PERIOD_MS);
             gpio_set_level(RELAY_GPIO, 0);
