@@ -3,6 +3,7 @@ idf_component_register(SRCS
                     "src/qrcodegen.c"
                     "src/handler_rgb.c"
                     "src/handler_spi.c"
+                    "src/handler_web.c"
                     "src/handler_data.c"
                     "src/handler_sntp.c"
                     "src/handler_wifi.c"
@@ -21,3 +22,6 @@ idf_component_register(SRCS
                     "src/Fonts/font24.c"
                     "src/Waveshare_ILI9486.c"
                     INCLUDE_DIRS "inc")
+
+set(WEB_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../front")
+spiffs_create_partition_image(www ${WEB_SRC_DIR} FLASH_IN_PROJECT)

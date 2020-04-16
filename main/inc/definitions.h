@@ -226,6 +226,8 @@ extern TaskHandle_t wiegand_task_handle;
 
 extern char screen_qr[6];
 
+#define CHECK_FILE_EXTENSION(filename, ext) (strcasecmp(&filename[strlen(filename) - strlen(ext)], ext) == 0)
+
 #define RGB_SIGNAL(rgb_value, rgb_leds, rgb_s) {\
                                         uint8_t rgb[5] = {rgb_value, rgb_leds, rgb_s};\
                                         xQueueSend(rgb_task_queue, &rgb, (unsigned int) 0);\

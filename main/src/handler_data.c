@@ -1,3 +1,4 @@
+#include "handler_web.h"
 #include "handler_data.h"
 #include "handler_parse.h"
 #include "handler_search.h"
@@ -158,46 +159,93 @@ static esp_err_t config_get_handler(httpd_req_t *req)
 {
     char ctm[128] = {'\0'};
 
-    memset(ctm, '\0', 128);
-    strcpy(ctm, "<form action=\"/config\" method=\"post\">");
+    char chunk[1024];
+    size_t read_bytes;
+
+    int fd = open("/www/head.html", O_RDONLY, 0);
+    if (fd == -1)
+    {
+        ESP_LOGE(TAG, "Failed to open file : /www/head.html");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
+        return ESP_FAIL;
+    }
+
+    httpd_resp_set_type(req, "text/html");
+
+    do {
+        read_bytes = read(fd, chunk, 1024);
+        if (read_bytes == -1)
+        {
+            ESP_LOGE(TAG, "Failed to read file : /www/head.html");
+        }
+        else if (read_bytes > 0)
+        {
+            if (httpd_resp_send_chunk(req, chunk, read_bytes) != ESP_OK)
+            {
+                close(fd);
+                ESP_LOGE(TAG, "File sending failed!");
+                httpd_resp_sendstr_chunk(req, NULL);
+                httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
+                return ESP_FAIL;
+            }
+        }
+    } while (read_bytes > 0);
+    close(fd);
+
+    strcpy(ctm, "<form action=/config method=post>");
     httpd_resp_send_chunk(req, ctm, strlen(ctm));
     memset(ctm, '\0', 128);
     struct stat st;
     if (stat(FILE_CONFIG, &st) == 0)
     {
-        strcpy(ctm, "<label for=\"opt\">There is a previous device configuration. Do you want to load it? (y/n):</label><br>");
+        strcpy(ctm, "<label for=opt>There is a previous device configuration. Do you want to load it?</label><br>");
         httpd_resp_send_chunk(req, ctm, strlen(ctm));
         memset(ctm, '\0', 128);
-        strcpy(ctm, "<input type=\"radio\" name=\"opt\" value=\"y\">");
+        strcpy(ctm, "<div class=gr-in><div class=in-gr><input class=opt type=radio name=opt value=y><label for=opt>Yes</label></div>");
         httpd_resp_send_chunk(req, ctm, strlen(ctm));
         memset(ctm, '\0', 128);
-        strcpy(ctm, "<label for=\"opt\">Yes</label><br>");
-        httpd_resp_send_chunk(req, ctm, strlen(ctm));
-        memset(ctm, '\0', 128);
-        strcpy(ctm, "<input type=\"radio\" name=\"opt\" value=\"n\">");
-        httpd_resp_send_chunk(req, ctm, strlen(ctm));
-        memset(ctm, '\0', 128);
-        strcpy(ctm, "<label for=\"opt\">No</label><br>");
+        strcpy(ctm, "<div class=in-gr><input class=opt type=radio name=opt value=n><label for=opt>No</label></div></div>");
         httpd_resp_send_chunk(req, ctm, strlen(ctm));
         memset(ctm, '\0', 128);
     }
     else
     {
-        strcpy(ctm, "<label for=\"opt\">There is no previous device configuration.</label><br>");
+        strcpy(ctm, "<label for=opt>There is no previous device configuration.</label><br>");
         httpd_resp_send_chunk(req, ctm, strlen(ctm));
         memset(ctm, '\0', 128);
     }
-    strcpy(ctm, "<label for=\"code\">Enter registration code:</label>");
+    strcpy(ctm, "<label for=code>Enter registration code:</label><br><br>");
     httpd_resp_send_chunk(req, ctm, strlen(ctm));
     memset(ctm, '\0', 128);
-    strcpy(ctm, "<input type=\"text\" id=\"code\" name=\"code\"><br><br>");
+    strcpy(ctm, "<input class=opt type=number maxlength=6 id=code name=code><button class=opt type=submit>Set configuration</button></form>");
     httpd_resp_send_chunk(req, ctm, strlen(ctm));
-    memset(ctm, '\0', 128);
-    strcpy(ctm, "<button type=\"submit\">Set code</button>");
-    httpd_resp_send_chunk(req, ctm, strlen(ctm));
-    memset(ctm, '\0', 128);
-    strcpy(ctm, "</form>");
-    httpd_resp_send_chunk(req, ctm, strlen(ctm));
+
+    fd = open("/www/end.html", O_RDONLY, 0);
+    if (fd == -1)
+    {
+        ESP_LOGE(TAG, "Failed to open file : /www/end.html");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
+        return ESP_FAIL;
+    }
+
+    do {
+        read_bytes = read(fd, chunk, 1024);
+        if (read_bytes == -1)
+        {
+            ESP_LOGE(TAG, "Failed to read file : /www/end.html");
+        } else if (read_bytes > 0)
+        {
+            if (httpd_resp_send_chunk(req, chunk, read_bytes) != ESP_OK)
+            {
+                close(fd);
+                ESP_LOGE(TAG, "File sending failed!");
+                httpd_resp_sendstr_chunk(req, NULL);
+                httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
+                return ESP_FAIL;
+            }
+        }
+    } while (read_bytes > 0);
+    close(fd);
 
     return ESP_OK;
 }
@@ -219,45 +267,6 @@ static esp_err_t config_post_handler(httpd_req_t *req)
     }
     httpd_resp_send_chunk(req, NULL, 0);
     return ESP_OK;
-}
-
-static httpd_handle_t start_webserver(void)
-{
-    httpd_handle_t server = NULL;
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-
-    httpd_uri_t config_post =
-    {
-        .uri       = "/config",
-        .method    = HTTP_POST,
-        .handler   = config_post_handler,
-        .user_ctx  = NULL
-    };
-
-    httpd_uri_t config_get =
-    {
-        .uri       = "/config",
-        .method    = HTTP_GET,
-        .handler   = config_get_handler,
-        .user_ctx  = NULL
-    };
-
-    ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
-    if(httpd_start(&server, &config) == ESP_OK)
-    {
-        ESP_LOGI(TAG, "Registering URI handlers");
-        httpd_register_uri_handler(server, &config_post);
-        httpd_register_uri_handler(server, &config_get);
-        return server;
-    }
-
-    ESP_LOGI(TAG, "Error starting server!");
-    return NULL;
-}
-
-static void stop_webserver(httpd_handle_t server)
-{
-    httpd_stop(server);
 }
 
 static void register_on_api()
@@ -317,7 +326,7 @@ void data_register()
     int8_t opt = -1;
     char in_opt[1] = "";
 
-    server_code = start_webserver();
+    server_code = start_webserver(config_get_handler, config_post_handler);
 
     if(stat(FILE_CONFIG, &st) == 0)
     {
@@ -329,7 +338,6 @@ void data_register()
             stop_webserver(server_code);
             FILE *f  = fopen(FILE_CONFIG, "r");
             fscanf(f, "%[^,],%[^,],%[^,]", apitoken, idcontrolador, database);
-            printf("Token = %s\n", apitoken);
             fclose(f);
             RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
         }

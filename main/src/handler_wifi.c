@@ -1,4 +1,5 @@
 #include "handler_wifi.h"
+#include "handler_web.h"
 
 #define GOT_IPV4_BIT BIT(0)
 #define CONNECTED_BITS (GOT_IPV4_BIT)
@@ -22,41 +23,106 @@ static char net_password[50] = "";
 
 static esp_err_t config_get_handler(httpd_req_t *req)
 {
-    char ctm[100] = {'\0'};
+    char ctm[128] = {'\0'};
     char lel[4] = {'\0'};
 
-    strcpy(ctm, "<form action=\"/config\" method=\"post\">");
+    char chunk[1024];
+    size_t read_bytes;
+
+    int fd = open("/www/head.html", O_RDONLY, 0);
+    if (fd == -1)
+    {
+        ESP_LOGE(TAG, "Failed to open file : /www/head.html");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
+        return ESP_FAIL;
+    }
+
+    httpd_resp_set_type(req, "text/html");
+
+    do {
+        read_bytes = read(fd, chunk, 1024);
+        if (read_bytes == -1)
+        {
+            ESP_LOGE(TAG, "Failed to read file : /www/head.html");
+        }
+        else if (read_bytes > 0)
+        {
+            if (httpd_resp_send_chunk(req, chunk, read_bytes) != ESP_OK)
+            {
+                close(fd);
+                ESP_LOGE(TAG, "File sending failed!");
+                httpd_resp_sendstr_chunk(req, NULL);
+                httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
+                return ESP_FAIL;
+            }
+        }
+    } while (read_bytes > 0);
+    close(fd);
+
+    strcpy(ctm, "<form action=/config method=post>");
+    httpd_resp_send_chunk(req, ctm, strlen(ctm));
+    memset(ctm, '\0', 128);
+    strcpy(ctm, "<label for=opt>Select the Wifi network:</label><br><div class=gr-in>");
+    httpd_resp_send_chunk(req, ctm, strlen(ctm));
+    memset(ctm, '\0', 128);
+    strcpy(ctm, "<div class=in-gr><input class=opt type=radio name=ssid value=0><label align=left for=ssid_0>Default</label></div>");
     httpd_resp_send_chunk(req, ctm, strlen(ctm));
     for(uint8_t i = 0; i < ap_count; i++)
     {
-        memset(ctm, '\0', 100);
-        strcpy(ctm, "<input type=\"radio\" name=\"ssid\" value=\"");
+        memset(ctm, '\0', 128);
+        strcpy(ctm, "<div class=in-gr><input class=opt type=radio name=ssid value=");
         sprintf(lel, "%d", i+1);
         strcat(ctm, lel);
-        strcat(ctm, "\">");
+        strcat(ctm, ">");
         httpd_resp_send_chunk(req, ctm, strlen(ctm));
 
-        memset(ctm, '\0', 100);
-        strcpy(ctm, "<label for=\"ssid_");
+        memset(ctm, '\0', 128);
+        strcpy(ctm, "<label align=left for=ssid_");
         sprintf(lel, "%d", i+1);
         strcat(ctm, lel);
-        strcat(ctm, "\">");
+        strcat(ctm, ">");
         strcat(ctm, (char*)ap_info[i].ssid);
-        strcat(ctm, "</label><br>");
+        strcat(ctm, "</label></div>");
         httpd_resp_send_chunk(req, ctm, strlen(ctm));
     }
-    memset(ctm, '\0', 100);
-    strcpy(ctm, "<label for=\"pass\">Wifi password:</label>");
+
+    memset(ctm, '\0', 128);
+    strcpy(ctm, "</div>");
     httpd_resp_send_chunk(req, ctm, strlen(ctm));
-    memset(ctm, '\0', 100);
-    strcpy(ctm, "<input type=\"text\" id=\"pass\" name=\"pass\"><br><br>");
+
+    memset(ctm, '\0', 128);
+    strcpy(ctm, "<label for=pass>Enter Wifi password if select:</label><br><br>");
     httpd_resp_send_chunk(req, ctm, strlen(ctm));
-    memset(ctm, '\0', 100);
-    strcpy(ctm, "<button type=\"submit\">Set wifi</button>");
+    memset(ctm, '\0', 128);
+    strcpy(ctm, "<input class=opt maxlength=50 type=text id=pass name=pass><button class=opt type=submit>Set wifi</button></form>");
     httpd_resp_send_chunk(req, ctm, strlen(ctm));
-    memset(ctm, '\0', 100);
-    strcpy(ctm, "</form>");
-    httpd_resp_send_chunk(req, ctm, strlen(ctm));
+
+    fd = open("/www/end.html", O_RDONLY, 0);
+    if (fd == -1)
+    {
+        ESP_LOGE(TAG, "Failed to open file : /www/end.html");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
+        return ESP_FAIL;
+    }
+
+    do {
+        read_bytes = read(fd, chunk, 1024);
+        if (read_bytes == -1)
+        {
+            ESP_LOGE(TAG, "Failed to read file : /www/end.html");
+        } else if (read_bytes > 0)
+        {
+            if (httpd_resp_send_chunk(req, chunk, read_bytes) != ESP_OK)
+            {
+                close(fd);
+                ESP_LOGE(TAG, "File sending failed!");
+                httpd_resp_sendstr_chunk(req, NULL);
+                httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
+                return ESP_FAIL;
+            }
+        }
+    } while (read_bytes > 0);
+    close(fd);
 
     return ESP_OK;
 }
@@ -78,45 +144,6 @@ static esp_err_t config_post_handler(httpd_req_t *req)
     }
     httpd_resp_send_chunk(req, NULL, 0);
     return ESP_OK;
-}
-
-static httpd_handle_t start_webserver(void)
-{
-    httpd_handle_t server = NULL;
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-
-    httpd_uri_t config_post =
-    {
-        .uri       = "/config",
-        .method    = HTTP_POST,
-        .handler   = config_post_handler,
-        .user_ctx  = NULL
-    };
-
-    httpd_uri_t config_get =
-    {
-        .uri       = "/config",
-        .method    = HTTP_GET,
-        .handler   = config_get_handler,
-        .user_ctx  = NULL
-    };
-
-    ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
-    if (httpd_start(&server, &config) == ESP_OK)
-    {
-        ESP_LOGI(TAG, "Registering URI handlers");
-        httpd_register_uri_handler(server, &config_post);
-        httpd_register_uri_handler(server, &config_get);
-        return server;
-    }
-
-    ESP_LOGI(TAG, "Error starting server!");
-    return NULL;
-}
-
-static void stop_webserver(httpd_handle_t server)
-{
-    httpd_stop(server);
 }
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
@@ -275,7 +302,7 @@ void wifi_init(void)
     ESP_ERROR_CHECK(esp_wifi_stop());
 
     wifi_init_ap();
-    server = start_webserver();
+    server = start_webserver(config_get_handler, config_post_handler);
 
     ESP_LOGI(TAG, "Select network from list [1-%d]. Enter 0 for default:", ap_count);
 
