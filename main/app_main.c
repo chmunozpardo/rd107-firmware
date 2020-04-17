@@ -15,7 +15,7 @@
 //static const char* TAG = "app_main";
 
 uint32_t reservation_size = 0;
-uint32_t card_size   = 0;
+uint32_t card_size        = 0;
 uint64_t timestamp        = 0;
 uint64_t timestamp_temp   = 0;
 
@@ -58,8 +58,12 @@ static void setup()
     remove(FILE_CARDS);
     remove(FILE_JSON);
     remove(FILE_RESERVATIONS);
-    //remove(FILE_CONFIG);
+    remove(FILE_CONFIG);
     remove(FILE_TIMESTAMP);
+
+    FILE *f  = fopen(FILE_CONFIG, "w");
+    fprintf(f, "%s,%s,%s", "dreamit-testing-rd107-2020", "16", "GK2_Titanium");
+    fclose(f);
 
     // Initiate all peripherals
     spi_init();

@@ -9,6 +9,7 @@ static FILE *f                      = NULL;
 
 void IRAM_ATTR search_card(uint8_t size, uint64_t value)
 {
+    RGB_SIGNAL(RGB_ORANGE, RGB_LEDS, 0);
     if(size == 26)
     {
         inputCard.cardType = 2;
@@ -66,6 +67,7 @@ void IRAM_ATTR search_card(uint8_t size, uint64_t value)
 
 void IRAM_ATTR search_reservation_qr(char *qr)
 {
+    RGB_SIGNAL(RGB_ORANGE, RGB_LEDS, 0);
     xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
     f = fopen(FILE_RESERVATIONS, "r");
     ESP_LOGD(TAG, "Searching reservation QR %s in database", qr);
@@ -104,6 +106,7 @@ void IRAM_ATTR search_reservation_qr(char *qr)
 
 void IRAM_ATTR search_reservation_code(char *code)
 {
+    RGB_SIGNAL(RGB_ORANGE, RGB_LEDS, 0);
     xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
     f = fopen(FILE_RESERVATIONS, "r");
     ESP_LOGD(TAG, "Searching reservation code %s in database", code);
