@@ -21,7 +21,6 @@ idf_component_register(SRCS
                     "src/Fonts/font16.c"
                     "src/Fonts/font20.c"
                     "src/Fonts/font24.c"
-                    "src/Waveshare_ILI9486.c"
                     INCLUDE_DIRS "inc")
 
 set(WEB_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../front")

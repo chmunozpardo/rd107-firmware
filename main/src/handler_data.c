@@ -2,7 +2,7 @@
 #include "handler_data.h"
 #include "handler_parse.h"
 #include "handler_search.h"
-#include "Waveshare_ILI9486.h"
+#include "handler_screen.h"
 
 static const char *TAG            = "data_handler";
 static const char *TAG_HTTPS      = "http_handler";
@@ -228,7 +228,7 @@ void data_register()
     strcat(screen_str, tmp_str);
     strcat(screen_str, "/config\nto configure this device");
 
-    screen_printf(screen_str);
+    screen_print_conf(screen_str);
 
     if(stat(FILE_CONFIG, &st) == 0)
     {
@@ -304,7 +304,7 @@ void IRAM_ATTR data_task(void *arg)
         vTaskPrioritySet(rgb_task_handle    , 2);
         vTaskPrioritySet(relay_task_handle  , 2);
         vTaskPrioritySet(buzzer_task_handle , 2);
-        vTaskPrioritySet(qr_task_handle     , 2);
+        vTaskPrioritySet(screen_task_handle     , 2);
 
         /*
         printf("Sizes = %u, %u\n", reservation_size, card_size);

@@ -38,8 +38,6 @@
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
 
-#include "fonts.h"
-
 #define COLOR           uint16_t
 #define POINT           uint16_t
 #define LENGTH          uint16_t
@@ -345,21 +343,21 @@ extern CARD card_data[CARD_READER_SIZE];
 extern RESERVATION reservation_importer[COPY_SIZE];
 extern RESERVATION reservation_data[RESERVATION_READER_SIZE];
 
-extern xQueueHandle qr_task_queue;
 extern xQueueHandle ntp_task_queue;
 extern xQueueHandle rgb_task_queue;
 extern xQueueHandle relay_task_queue;
 extern xQueueHandle buzzer_task_queue;
+extern xQueueHandle screen_task_queue;
 
 extern SemaphoreHandle_t reg_semaphore;
 extern SemaphoreHandle_t reservation_semaphore;
 
-extern TaskHandle_t qr_task_handle;
 extern TaskHandle_t ntp_task_handle;
 extern TaskHandle_t rgb_task_handle;
 extern TaskHandle_t data_task_handle;
 extern TaskHandle_t relay_task_handle;
 extern TaskHandle_t buzzer_task_handle;
+extern TaskHandle_t screen_task_handle;
 extern TaskHandle_t wiegand_task_handle;
 
 extern char screen_qr[6];
@@ -382,5 +380,5 @@ extern char screen_qr[6];
                             }
 
 #define QR_SIGNAL() {\
-                    xQueueSend(qr_task_queue, &screen_qr, (unsigned int) 0);\
+                    xQueueSend(screen_task_queue, &screen_qr, (unsigned int) 0);\
                     }

@@ -1,6 +1,6 @@
 #include "handler_wifi.h"
 #include "handler_web.h"
-#include "Waveshare_ILI9486.h"
+#include "handler_screen.h"
 
 #define GOT_IPV4_BIT BIT(0)
 #define CONNECTED_BITS (GOT_IPV4_BIT)
@@ -186,7 +186,7 @@ void wifi_init(void)
     };
     server = start_webserver(WIFI_WEBSERVER, &server_context);
 
-    screen_printf("Connect to\nrd107ap2020\nand browse to\n192.168.4.1/config\nto configure Wi-Fi");
+    screen_print_conf("Connect to\nrd107ap2020\nand browse to\n192.168.4.1/config\nto configure Wi-Fi");
 
     ESP_LOGI(TAG, "Select network from list [1-%d]. Enter 0 for default:", ap_count);
 

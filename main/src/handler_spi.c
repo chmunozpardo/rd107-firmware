@@ -21,8 +21,9 @@ DRAM_ATTR uint16_t tx_data_16b[SCREEN_BUFFER] = {0};
 
 void spi_init()
 {
-    qr_task_queue  = xQueueCreate(10, sizeof(uint8_t)*6);
-    rgb_task_queue = xQueueCreate(10, sizeof(uint8_t)*5);
+
+    rgb_task_queue     = xQueueCreate(10, sizeof(uint8_t)*5);
+    screen_task_queue  = xQueueCreate(10, sizeof(uint8_t)*6);
 
     memset(&t_rgb, 0, sizeof(t_rgb));
     t_rgb.length    = 8 * RGB_DATA_N;

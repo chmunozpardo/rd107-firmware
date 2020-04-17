@@ -11,7 +11,6 @@
 #include "handler_spi.h"
 #include "handler_sntp.h"
 #include "handler_wifi.h"
-#include "Waveshare_ILI9486.h"
 
 //static const char* TAG = "app_main";
 
@@ -22,16 +21,16 @@ uint64_t timestamp_temp   = 0;
 
 char screen_qr[6] = "000000";
 
-xQueueHandle qr_task_queue     = NULL;
 xQueueHandle rgb_task_queue    = NULL;
 xQueueHandle relay_task_queue  = NULL;
 xQueueHandle buzzer_task_queue = NULL;
+xQueueHandle screen_task_queue = NULL;
 
-TaskHandle_t qr_task_handle      = NULL;
 TaskHandle_t rgb_task_handle     = NULL;
+TaskHandle_t data_task_handle    = NULL;
 TaskHandle_t relay_task_handle   = NULL;
 TaskHandle_t buzzer_task_handle  = NULL;
-TaskHandle_t data_task_handle    = NULL;
+TaskHandle_t screen_task_handle  = NULL;
 TaskHandle_t wiegand_task_handle = NULL;
 
 SemaphoreHandle_t reg_semaphore         = NULL;
@@ -83,7 +82,7 @@ static void setup()
     esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(1));
 
     // 
-    xTaskCreatePinnedToCore(qr_task     , "cqr_task", 4096, NULL, 1,  &qr_task_handle     , 0);
+    xTaskCreatePinnedToCore(screen_task , "scr_task", 4096, NULL, 1,  &screen_task_handle , 0);
     xTaskCreatePinnedToCore(rgb_task    , "rgb_task", 2048, NULL, 1,  &rgb_task_handle    , 0);
     xTaskCreatePinnedToCore(relay_task  , "rly_task", 2048, NULL, 1,  &relay_task_handle  , 0);
     xTaskCreatePinnedToCore(buzzer_task , "bzr_task", 2048, NULL, 1,  &buzzer_task_handle , 0);
