@@ -172,8 +172,9 @@
 #define LCD_BRRED   0XFC07
 #define LCD_GRAY    0X8430
 
-#define LCD_LOGO_TOP    0x0376
-#define LCD_LOGO_BOT    0x028C
+#define LCD_LOGO_TOP    0x0354
+#define LCD_LOGO_BOT    0x3a8c
+#define LCD_LOGO_TEXT   0x9515
 
 #define WIEGAND_D0    14
 #define WIEGAND_D1    17
@@ -317,6 +318,10 @@ extern sFONT Font8;
 
 extern sFONT dreamit_LOGO_Top;
 extern sFONT dreamit_LOGO_Bot;
+
+extern sFONT dreamit_LOGO_Big_Top;
+extern sFONT dreamit_LOGO_Big_Bot;
+extern sFONT dreamit_LOGO_Big_Text;
 
 extern DEV_TIME sDev_time;
 

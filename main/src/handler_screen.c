@@ -466,7 +466,7 @@ void screen_print_text(POINT Xstart, POINT Ystart, const char * pString,
     }
 }
 
-static void screen_logo(POINT Xpoint, POINT Ypoint, COLOR Color_Background, COLOR Color_Foreground)
+static void screen_logo(POINT Xpoint, POINT Ypoint)
 {
     POINT Page, Column;
 
@@ -482,7 +482,10 @@ static void screen_logo(POINT Xpoint, POINT Ypoint, COLOR Color_Background, COLO
     {
         for(Column = 0; Column < dreamit_LOGO_Top.Width; Column++)
         {
-            if(*ptr & (0x80 >> (Column % 8))) screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_TOP, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+            if(*ptr & (0x80 >> (Column % 8)))
+            {
+                screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_TOP, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+            }
             if(Column % 8 == 7) ptr++;
         }
         if(dreamit_LOGO_Top.Width % 8 != 0) ptr++;
@@ -494,18 +497,77 @@ static void screen_logo(POINT Xpoint, POINT Ypoint, COLOR Color_Background, COLO
     {
         for(Column = 0; Column < dreamit_LOGO_Bot.Width; Column++)
         {
-            if(*ptr & (0x80 >> (Column % 8))) screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_BOT, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+            if(*ptr & (0x80 >> (Column % 8)))
+            {
+                        screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_BOT, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+            }
             if(Column % 8 == 7) ptr++;
         }
         if(dreamit_LOGO_Bot.Width % 8 != 0) ptr++;
     }
 }
 
+static void screen_big_logo(POINT Xpoint, POINT Ypoint)
+{
+    POINT Page, Column;
+
+    if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page)
+    {
+        ESP_LOGD(TAG, "screen_logo Input exceeds the normal display range\r\n");
+        return;
+    }
+
+    const unsigned char *ptr = dreamit_LOGO_Big_Top.table;
+
+    for(Page = 0; Page < dreamit_LOGO_Big_Top.Height; Page++)
+    {
+        for(Column = 0; Column < dreamit_LOGO_Big_Top.Width; Column++)
+        {
+            if(*ptr & (0x80 >> (Column % 8)))
+            {
+                screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_TOP, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+            }
+            if(Column % 8 == 7) ptr++;
+        }
+        if(dreamit_LOGO_Big_Top.Width % 8 != 0) ptr++;
+    }
+
+    ptr = dreamit_LOGO_Big_Bot.table;
+
+    for(Page = 0; Page < dreamit_LOGO_Big_Bot.Height; Page++)
+    {
+        for(Column = 0; Column < dreamit_LOGO_Big_Bot.Width; Column++)
+        {
+            if(*ptr & (0x80 >> (Column % 8)))
+            {
+                        screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_BOT, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+            }
+            if(Column % 8 == 7) ptr++;
+        }
+        if(dreamit_LOGO_Big_Bot.Width % 8 != 0) ptr++;
+    }
+
+    ptr = dreamit_LOGO_Big_Text.table;
+
+    for(Page = 0; Page < dreamit_LOGO_Big_Text.Height; Page++)
+    {
+        for(Column = 0; Column < dreamit_LOGO_Big_Text.Width; Column++)
+        {
+            if(*ptr & (0x80 >> (Column % 8)))
+            {
+                        screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_TEXT, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+            }
+            if(Column % 8 == 7) ptr++;
+        }
+        if(dreamit_LOGO_Big_Text.Width % 8 != 0) ptr++;
+    }
+}
+
 void screen_print_conf(char *text)
 {
     screen_clear(LCD_BACKGROUND);
-    screen_logo(10, 10, FONT_BACKGROUND, FONT_FOREGROUND);
-    screen_logo(sLCD_DIS.LCD_Dis_Column - 42, 10, FONT_BACKGROUND, FONT_FOREGROUND);
+    screen_logo(10, 10);
+    screen_logo(sLCD_DIS.LCD_Dis_Column - 42, 10);
     screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - 11*5, 20, "dreamit.cl", &Font16, FONT_BACKGROUND, FONT_FOREGROUND);
     screen_print_text(10, 80, text, &Font24, FONT_BACKGROUND, FONT_FOREGROUND);
     screen_draw_rectangle(10,  60, sLCD_DIS.LCD_Dis_Column - 10,  66, LCD_LOGO_BOT, DRAW_FULL, DOT_PIXEL_DFT);
@@ -515,6 +577,13 @@ void screen_print_conf(char *text)
 void screen_task(void *arg)
 {
     screen_clear(LCD_BACKGROUND);
+    screen_big_logo((QR_SIZE*21 + 2*QR_OFFSET + sLCD_DIS.LCD_Dis_Column - dreamit_LOGO_Big_Top.Width)/2,
+                    sLCD_DIS.LCD_Dis_Page/2 - dreamit_LOGO_Big_Top.Height/2);
+    screen_draw_rectangle(               QR_OFFSET/2,
+                                         QR_OFFSET/2,
+                          QR_SIZE*21 + 3*QR_OFFSET/2,
+                          QR_SIZE*21 + 3*QR_OFFSET/2,
+                          LCD_LOGO_BOT, DRAW_EMPTY, DOT_PIXEL_DFT);
     enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
     uint8_t qrcode[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
     uint8_t temp_buffer[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
