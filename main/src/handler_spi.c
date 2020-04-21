@@ -5,6 +5,7 @@ static const char* TAG = "spi_handler";
 static esp_err_t ret;
 
 static spi_device_handle_t spi_rgb;
+static spi_device_handle_t spi_touch;
 static spi_device_handle_t spi_screen;
 
 static spi_transaction_t t_rgb;
@@ -37,7 +38,6 @@ void spi_init()
 
     memset(&t_screen_8b, 0, sizeof(t_screen_8b));
     t_screen_8b.length    = 8 * 3;
-    t_screen_8b.rxlength  = 8 * 3;
     t_screen_8b.user      = (void*)0;
     t_screen_8b.tx_buffer = tx_data_8b;
     t_screen_8b.rx_buffer = rx_data_8b;
@@ -84,6 +84,14 @@ void spi_init()
         .queue_size     = 40,
     };
 
+    spi_device_interface_config_t devcfg_touch=
+    {
+        .clock_speed_hz = TOUCH_FREQ,
+        .mode = 0,
+        .spics_io_num = -1,
+        .queue_size = 1,
+    };
+
     ESP_LOGI(TAG, "Initializing SPI for RGB");
     ret = spi_bus_initialize(VSPI_HOST, &buscfg_rgb, 2);
     ESP_ERROR_CHECK(ret);
@@ -91,11 +99,14 @@ void spi_init()
     ret = spi_bus_add_device(VSPI_HOST, &devcfg_rgb, &spi_rgb);
     ESP_ERROR_CHECK(ret);
 
-    ESP_LOGI(TAG, "Initializing SPI for TOUCH");
+    ESP_LOGI(TAG, "Initializing SPI for Screen & Touch");
     ret = spi_bus_initialize(HSPI_HOST, &buscfg_screen, 1);
     ESP_ERROR_CHECK(ret);
 
     ret = spi_bus_add_device(HSPI_HOST, &devcfg_screen, &spi_screen);
+    ESP_ERROR_CHECK(ret);
+
+    ret = spi_bus_add_device(HSPI_HOST, &devcfg_touch, &spi_touch);
     ESP_ERROR_CHECK(ret);
 
     gpio_pad_select_gpio(LCD_PIN_DC);
@@ -105,6 +116,10 @@ void spi_init()
     gpio_pad_select_gpio(LCD_PIN_CS);
     gpio_set_direction(LCD_PIN_CS, GPIO_MODE_OUTPUT);
     gpio_set_level(LCD_PIN_CS, 1);
+
+    gpio_pad_select_gpio(TOUCH_PIN_CS);
+    gpio_set_direction(TOUCH_PIN_CS, GPIO_MODE_OUTPUT);
+    gpio_set_level(TOUCH_PIN_CS, 1);
 
     gpio_pad_select_gpio(LCD_PIN_IRQ);
     gpio_set_direction(LCD_PIN_IRQ, GPIO_MODE_INPUT);
@@ -144,32 +159,30 @@ void screen_write_word(uint16_t Data, uint32_t DataLen)
         t_screen_16b.length   = 16 * SCREEN_BUFFER;
         ret = spi_device_polling_transmit(spi_screen, &t_screen_16b);
     }
-    for(i = 0; i < rem; i++) tx_data_16b[i] = SPI_SWAP_DATA_TX(Data, 16);
-    t_screen_16b.length   = 16 * rem;
-    ret = spi_device_polling_transmit(spi_screen, &t_screen_16b);
+    if(rem > 0)
+    {
+        t_screen_16b.length = 16 * rem;
+        for(i = 0; i < rem; i++) tx_data_16b[i] = SPI_SWAP_DATA_TX(Data, 16);
+        ret = spi_device_polling_transmit(spi_screen, &t_screen_16b);
+    }
     gpio_set_level(LCD_PIN_CS, 1);
 }
 
 uint16_t screen_read_byte(uint8_t Data)
 {
-    uint8_t a0 = 0;
-    uint8_t a1 = 0;
+    uint8_t a0           = 0;
+    uint8_t a1           = 0;
+    t_screen_8b.length   = 8 * 3;
+    t_screen_8b.rxlength = 8 * 3;
 
-    t_screen_8b.length   = 8 * 1;
-    t_screen_8b.rxlength = 8 * 1;
-
-    gpio_set_level(LCD_PIN_CS, 0);
     tx_data_8b[0] = Data;
-    ret = spi_device_polling_transmit(spi_screen, &t_screen_8b);
+    tx_data_8b[1] = 0xFF;
+    tx_data_8b[2] = 0xFF;
 
-    tx_data_8b[0] = 0xFF;
-    ret = spi_device_polling_transmit(spi_screen, &t_screen_8b);
-    a0 = rx_data_8b[0];
-
-    tx_data_8b[0] = 0xFF;
-    ret = spi_device_polling_transmit(spi_screen, &t_screen_8b);
-    a1 = rx_data_8b[0];
-    gpio_set_level(LCD_PIN_CS, 1);
-    uint16_t out = (a0 << 5) | (a1 >> 3);
+    gpio_set_level(TOUCH_PIN_CS, 0);
+    ret = spi_device_polling_transmit(spi_touch, &t_screen_8b);
+    gpio_set_level(TOUCH_PIN_CS, 1);
+    uint32_t asdf = SPI_SWAP_DATA_RX(rx_data_8b[0], 24);
+    uint16_t out = ((asdf>>8)<<5) | ((asdf>>16)>>3);
     return out;
 }

@@ -42,6 +42,11 @@ DRAM_ATTR CARD card_data[CARD_READER_SIZE]           = {0};
 DRAM_ATTR RESERVATION reservation_importer[COPY_SIZE]           = {0};
 DRAM_ATTR RESERVATION reservation_data[RESERVATION_READER_SIZE] = {0};
 
+static void system_init()
+{
+    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+}
+
 static void setup()
 {
     // Disable Watchdog at startup
@@ -50,6 +55,7 @@ static void setup()
     // Registers file semaphore
     reg_semaphore         = xSemaphoreCreateMutex();
     reservation_semaphore = xSemaphoreCreateMutex();
+    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 
     // First load filesystem
     fs_init();
@@ -68,9 +74,13 @@ static void setup()
     // Initiate all peripherals
     spi_init();
     relay_init();
+    touch_init();
     buzzer_init();
     screen_init();
     wiegand_init();
+
+    TP_Dialog();
+    for(;;){;}
 
     // Initiate WiFi configurations
     wifi_init();

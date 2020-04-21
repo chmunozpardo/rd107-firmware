@@ -130,6 +130,12 @@
 #define LCD_PIN_DC          23
 #define LCD_PIN_IRQ         26
 
+#define TP_PRESS_DOWN       0x80
+#define TP_PRESSED          0x40
+
+#define TOUCH_FREQ          125000
+#define TOUCH_PIN_CS        12
+
 #define QR_SIZE             14
 #define QR_OFFSET           (320 - QR_SIZE * 21)/2
 #define SCREEN_BUFFER       1024
@@ -324,6 +330,7 @@ extern sFONT dreamit_LOGO_Big_Bot;
 extern sFONT dreamit_LOGO_Big_Text;
 
 extern DEV_TIME sDev_time;
+extern LCD_DIS sLCD_DIS;
 
 extern char apitoken[30];
 extern char database[20];

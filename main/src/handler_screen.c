@@ -189,15 +189,11 @@ void screen_gram_scan(LCD_SCAN_DIR Scan_dir)
 void screen_init()
 {
     screen_init_reg();
-
     screen_gram_scan(SCAN_DIR_DFT);
     vTaskDelay(200/portTICK_PERIOD_MS);
-
     screen_write_byte(0x11);
     vTaskDelay(120/portTICK_PERIOD_MS);
-
     screen_write_byte(0x29);
-
     screen_clear(LCD_BACKGROUND);
 }
 
@@ -231,7 +227,7 @@ void screen_set_point_color( POINT Xpoint, POINT Ypoint, COLOR Color)
 {
     if((Xpoint <= sLCD_DIS.LCD_Dis_Column) && (Ypoint <= sLCD_DIS.LCD_Dis_Page))
     {
-        screen_set_cursor (Xpoint, Ypoint);
+        screen_set_cursor(Xpoint, Ypoint);
         screen_set_color(Color, 1, 1);
     }
 }
@@ -241,7 +237,7 @@ void screen_set_area_color(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, C
     if((Xend > Xstart) && (Yend > Ystart))
     {
         screen_set_window(Xstart, Ystart, Xend, Yend);
-        screen_set_color (Color, Xend - Xstart, Yend - Ystart);
+        screen_set_color(Color, Xend - Xstart, Yend - Ystart);
     }
 }
 void screen_clear(COLOR Color)
@@ -252,7 +248,8 @@ void screen_clear(COLOR Color)
 void screen_draw_point(POINT Xpoint, POINT Ypoint, COLOR Color,
                    DOT_PIXEL Dot_Pixel, DOT_STYLE DOT_STYLE)
 {
-    if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page) {
+    if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page)
+    {
         ESP_LOGD(TAG, "screen_draw_point Input exceeds the normal display range\r\n");
         return;
     }
@@ -353,7 +350,8 @@ void screen_draw_rectangle(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend,
 void screen_draw_circle(POINT X_Center, POINT Y_Center, LENGTH Radius,
                     COLOR Color, DRAW_FILL Draw_Fill, DOT_PIXEL Dot_Pixel)
 {
-    if(X_Center > sLCD_DIS.LCD_Dis_Column || Y_Center >= sLCD_DIS.LCD_Dis_Page) {
+    if(X_Center > sLCD_DIS.LCD_Dis_Column || Y_Center >= sLCD_DIS.LCD_Dis_Page)
+    {
         ESP_LOGD(TAG, "screen_draw_circle Input exceeds the normal display range\r\n");
         return;
     }
@@ -407,7 +405,8 @@ void screen_print_char(POINT Xpoint, POINT Ypoint, const char Acsii_Char,
 {
     POINT Page, Column;
 
-    if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page) {
+    if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page)
+    {
         ESP_LOGD(TAG, "screen_print_char Input exceeds the normal display range\r\n");
         return;
     }

@@ -28,13 +28,8 @@ void wiegand_init(void)
     gpio_pad_select_gpio(WIEGAND_D1);
     gpio_set_direction(WIEGAND_D0, GPIO_MODE_INPUT);
     gpio_set_direction(WIEGAND_D1, GPIO_MODE_INPUT);
-    gpio_pullup_dis(WIEGAND_D0);
-    gpio_pullup_dis(WIEGAND_D1);
-    gpio_pulldown_dis(WIEGAND_D0);
-    gpio_pulldown_dis(WIEGAND_D1);
     gpio_set_intr_type(WIEGAND_D0, GPIO_INTR_NEGEDGE);
     gpio_set_intr_type(WIEGAND_D1, GPIO_INTR_NEGEDGE);
-    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     gpio_isr_handler_add(WIEGAND_D0, wiegand_isr, (void*) NULL);
     gpio_isr_handler_add(WIEGAND_D1, wiegand_isr, (void*) NULL);
 }
