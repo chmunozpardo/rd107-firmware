@@ -132,7 +132,7 @@ static unsigned char touch_input(unsigned char chCoordType)
     return (sTP_DEV.chStatus & TP_PRESS_DOWN);
 }
 
-void touch_init(void)
+void touch_init_f(void)
 {
     debounce_queue = xQueueCreate(10, sizeof(uint8_t) * 1);
     sTP_DEV.TP_Scan_Dir = SCAN_DIR_DFT;

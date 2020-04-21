@@ -24,7 +24,7 @@ void spi_init()
 {
 
     rgb_task_queue     = xQueueCreate(10, sizeof(uint8_t)*5);
-    screen_task_queue  = xQueueCreate(10, sizeof(uint8_t)*6);
+    screen_task_queue  = xQueueCreate(10, sizeof(screen_queue_t));
 
     memset(&t_rgb, 0, sizeof(t_rgb));
     t_rgb.length    = 8 * RGB_DATA_N;
@@ -165,10 +165,18 @@ void screen_write_word(uint16_t Data, uint32_t DataLen)
     gpio_set_level(LCD_PIN_CS, 1);
 }
 
+void screen_write_buffer(uint32_t DataLen)
+{
+    gpio_set_level(LCD_PIN_DC, 1);
+    gpio_set_level(LCD_PIN_CS, 0);
+    t_screen_16b.length   = 16 * DataLen;
+    ret = spi_device_polling_transmit(spi_screen, &t_screen_16b);
+    gpio_set_level(LCD_PIN_CS, 1);
+}
+
+
 uint16_t screen_read_byte(uint8_t Data)
 {
-    uint8_t a0           = 0;
-    uint8_t a1           = 0;
     t_screen_8b.length   = 8 * 3;
     t_screen_8b.rxlength = 8 * 3;
 

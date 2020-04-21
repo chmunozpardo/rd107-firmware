@@ -138,7 +138,7 @@
 
 #define QR_SIZE             14
 #define QR_OFFSET           (320 - QR_SIZE * 21)/2
-#define SCREEN_BUFFER       1024
+#define SCREEN_BUFFER       2046
 
 // WS2812 parameters
 #define RGB_LEDS            14  // Number of pixels
@@ -203,6 +203,13 @@ typedef struct _tFont
     uint16_t Height;
     COLOR color;
 } sFONT;
+
+typedef struct screen_queue_t
+{
+    char msg[7];
+    uint8_t status;
+    uint8_t timer;
+} screen_queue_t;
 
 typedef enum {
     DOT_PIXEL_1X1 = 1,
@@ -335,6 +342,7 @@ extern sFONT dreamit_LOGO_Big_Text;
 
 extern sFONT cross_Sign;
 extern sFONT check_Sign;
+extern sFONT circle_Sign;
 
 extern DEV_TIME sDev_time;
 extern LCD_DIS sLCD_DIS;
@@ -343,6 +351,7 @@ extern char apitoken[30];
 extern char database[20];
 extern char idcontrolador[3];
 extern char wifi_ssid[30];
+extern char screen_qr[7];
 
 extern ip4_str ip_addr;
 extern ip4_str gw_addr;
@@ -379,7 +388,7 @@ extern TaskHandle_t buzzer_task_handle;
 extern TaskHandle_t screen_task_handle;
 extern TaskHandle_t wiegand_task_handle;
 
-extern char screen_qr[6];
+extern screen_queue_t screen_task_data;
 
 #define CHECK_FILE_EXTENSION(filename, ext) (strcasecmp(&filename[strlen(filename) - strlen(ext)], ext) == 0)
 
@@ -398,6 +407,12 @@ extern char screen_qr[6];
                             xQueueSend(buzzer_task_queue, &buzzer, (unsigned int) 0);\
                             }
 
-#define QR_SIGNAL() {\
-                    xQueueSend(screen_task_queue, &screen_qr, (unsigned int) 0);\
+#define SCREEN_SIGNAL(screen_msg, screen_status ,screen_s) {\
+                    screen_queue_t screen = {\
+                        .msg    = "",\
+                        .status = screen_status,\
+                        .timer  = screen_s\
+                    };\
+                    strcpy(screen.msg, screen_msg);\
+                    xQueueSend(screen_task_queue, &screen, (unsigned int) 0);\
                     }

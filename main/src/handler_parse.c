@@ -150,7 +150,7 @@ void IRAM_ATTR parse_qr(void)
     {
         ESP_LOGD(TAG, "QR Code = %s", qr_placeholder);
         strcpy(screen_qr, qr_placeholder);
-        QR_SIGNAL();
+        SCREEN_SIGNAL(screen_qr, 0, 5);
     }
     fclose(f);
     remove(FILE_JSON);

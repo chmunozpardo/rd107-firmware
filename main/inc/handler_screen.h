@@ -20,9 +20,6 @@ void screen_print_char(POINT Xstart, POINT Ystart, const char Acsii_Char, sFONT 
 void screen_print_text(POINT Xstart, POINT Ystart, const char * pString, sFONT *Font, COLOR Color_Background, COLOR Color_Foreground);
 void screen_print_conf(char *text);
 
-void screen_cross(POINT Xpoint, POINT Ypoint);
-void screen_check(POINT Xpoint, POINT Ypoint);
-
 void screen_set_color(COLOR Color ,POINT Xpoint, POINT Ypoint);
 void screen_set_cursor(POINT Xpoint, POINT Ypoint);
 void screen_set_window(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend);

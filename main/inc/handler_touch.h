@@ -8,7 +8,7 @@ extern "C" {
 
 void TP_Dialog(void);
 void TP_DrawBoard(void);
-void touch_init(void);
+void touch_init_f (void);
 void debounce_task(void *arg);
 
 #ifdef __cplusplus

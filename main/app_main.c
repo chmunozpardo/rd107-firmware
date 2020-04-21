@@ -19,7 +19,7 @@ uint32_t card_size        = 0;
 uint64_t timestamp        = 0;
 uint64_t timestamp_temp   = 0;
 
-char screen_qr[6] = "000000";
+char screen_qr[7] = "000000\0";
 
 xQueueHandle rgb_task_queue    = NULL;
 xQueueHandle relay_task_queue  = NULL;
@@ -68,13 +68,13 @@ static void setup()
     remove(FILE_TIMESTAMP);
 
     FILE *f  = fopen(FILE_CONFIG, "w");
-    fprintf(f, "%s,%s,%s", "dreamit-testing-rd107-2020", "16", "GK2_Titanium");
+    fprintf(f, "%s,%s,%s", "dreamit-testing-rd107-2020", "1", "GK2_Industrias");
     fclose(f);
 
     // Initiate all peripherals
     spi_init();
     relay_init();
-    touch_init();
+    touch_init_f();
     buzzer_init();
     screen_init();
     wiegand_init();
@@ -82,9 +82,10 @@ static void setup()
     xTaskCreatePinnedToCore(debounce_task , "dbn_task", 4096, NULL, 1, NULL, 0);
 
     //TP_Dialog();
-    screen_cross(50, 50);
-    screen_check(200, 50);
-    for(;;){;}
+    //screen_cross();
+    //vTaskDelay(5000/portTICK_PERIOD_MS);
+    //screen_check();
+    //for(;;){;}
 
     // Initiate WiFi configurations
     wifi_init();

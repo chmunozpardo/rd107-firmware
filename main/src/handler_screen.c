@@ -4,9 +4,11 @@
 
 static const char *TAG = "screen_handler";
 
-static char status[6] = "123456";
+screen_queue_t screen_task_data = {"123456\0", 0, 0};
 
 LCD_DIS sLCD_DIS;
+
+extern uint16_t tx_data_16b[SCREEN_BUFFER];
 
 static void screen_swap(POINT Point1, POINT Point2)
 {
@@ -404,6 +406,7 @@ void screen_print_char(POINT Xpoint, POINT Ypoint, const char Acsii_Char,
                  sFONT *Font, COLOR Color_Background, COLOR Color_Foreground)
 {
     POINT Page, Column;
+    uint32_t buffer_n = 0;
 
     if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page)
     {
@@ -413,24 +416,23 @@ void screen_print_char(POINT Xpoint, POINT Ypoint, const char Acsii_Char,
 
     uint32_t Char_Offset = (Acsii_Char - ' ') * Font->Height * (Font->Width / 8 + (Font->Width % 8 ? 1 : 0));
     const unsigned char *ptr = &Font->table[Char_Offset];
-
+    screen_set_window(Xpoint, Ypoint, Xpoint + Font->Width, Ypoint + Font->Height);
     for(Page = 0; Page < Font->Height; Page++)
     {
         for(Column = 0; Column < Font->Width; Column++)
         {
-            if(FONT_BACKGROUND == Color_Background)
-            {
-                if(*ptr & (0x80 >> (Column % 8))) screen_draw_point(Xpoint + Column, Ypoint + Page, Color_Foreground, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-            }
-            else
-            {
-                if(*ptr & (0x80 >> (Column % 8))) screen_draw_point(Xpoint + Column, Ypoint + Page, Color_Foreground, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-                else screen_draw_point(Xpoint + Column, Ypoint + Page, Color_Background, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-            }
+            if(*ptr & (0x80 >> (Column % 8))) tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(Color_Foreground, 16);
+            else tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(Color_Background, 16);
             if(Column % 8 == 7) ptr++;
+            if(buffer_n == SCREEN_BUFFER)
+            {
+                screen_write_buffer(buffer_n);
+                buffer_n = 0;
+            }
         }
         if(Font->Width % 8 != 0) ptr++;
     }
+    if(buffer_n != 0) screen_write_buffer(buffer_n);
 }
 
 void screen_print_text(POINT Xstart, POINT Ystart, const char * pString,
@@ -465,50 +467,10 @@ void screen_print_text(POINT Xstart, POINT Ystart, const char * pString,
     }
 }
 
-static void screen_logo(POINT Xpoint, POINT Ypoint)
+static void screen_draw_from_rom(POINT Xpoint, POINT Ypoint, sFONT *table, COLOR Color_Background)
 {
     POINT Page, Column;
-
-    if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page)
-    {
-        ESP_LOGD(TAG, "screen_logo Input exceeds the normal display range\r\n");
-        return;
-    }
-
-    const unsigned char *ptr = dreamit_LOGO_Top.table;
-
-    for(Page = 0; Page < dreamit_LOGO_Top.Height; Page++)
-    {
-        for(Column = 0; Column < dreamit_LOGO_Top.Width; Column++)
-        {
-            if(*ptr & (0x80 >> (Column % 8)))
-            {
-                screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_TOP, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-            }
-            if(Column % 8 == 7) ptr++;
-        }
-        if(dreamit_LOGO_Top.Width % 8 != 0) ptr++;
-    }
-
-    ptr = dreamit_LOGO_Bot.table;
-
-    for(Page = 0; Page < dreamit_LOGO_Bot.Height; Page++)
-    {
-        for(Column = 0; Column < dreamit_LOGO_Bot.Width; Column++)
-        {
-            if(*ptr & (0x80 >> (Column % 8)))
-            {
-                        screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_BOT, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-            }
-            if(Column % 8 == 7) ptr++;
-        }
-        if(dreamit_LOGO_Bot.Width % 8 != 0) ptr++;
-    }
-}
-
-static void screen_draw_from_rom(POINT Xpoint, POINT Ypoint, sFONT *table)
-{
-    POINT Page, Column;
+    uint32_t buffer_n = 0;
 
     if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page)
     {
@@ -517,35 +479,137 @@ static void screen_draw_from_rom(POINT Xpoint, POINT Ypoint, sFONT *table)
     }
     const unsigned char *ptr = table->table;
 
+    screen_set_window(Xpoint, Ypoint, Xpoint + table->Width, Ypoint + table->Height);
     for(Page = 0; Page < table->Height; Page++)
     {
         for(Column = 0; Column < table->Width; Column++)
         {
-            if(*ptr & (0x80 >> (Column % 8)))
-            {
-                screen_draw_point(Xpoint + Column, Ypoint + Page, table->color, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-            }
+            if(*ptr & (0x80 >> (Column % 8))) tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(table->color, 16);
+            else tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(Color_Background, 16);
             if(Column % 8 == 7) ptr++;
+            if(buffer_n == SCREEN_BUFFER)
+            {
+                screen_write_buffer(buffer_n);
+                buffer_n = 0;
+            }
         }
         if(table->Width % 8 != 0) ptr++;
     }
+    if(buffer_n != 0) screen_write_buffer(buffer_n);
+}
+
+static void screen_logo(POINT Xpoint, POINT Ypoint)
+{
+    POINT Page, Column;
+    uint32_t buffer_n = 0;
+
+    if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page)
+    {
+        ESP_LOGD(TAG, "screen_logo Input exceeds the normal display range\r\n");
+        return;
+    }
+    const unsigned char *ptr0 = dreamit_LOGO_Top.table;
+    const unsigned char *ptr1 = dreamit_LOGO_Bot.table;
+
+    screen_set_window(Xpoint, Ypoint, Xpoint + dreamit_LOGO_Bot.Width, Ypoint + dreamit_LOGO_Bot.Height);
+    for(Page = 0; Page < dreamit_LOGO_Bot.Height; Page++)
+    {
+        for(Column = 0; Column < dreamit_LOGO_Bot.Width; Column++)
+        {
+            if     (*ptr0 & (0x80 >> (Column % 8))) tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(dreamit_LOGO_Top.color, 16);
+            else if(*ptr1 & (0x80 >> (Column % 8))) tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(dreamit_LOGO_Bot.color, 16);
+            else tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(LCD_WHITE, 16);
+            if(Column % 8 == 7)
+            {
+                ptr0++;
+                ptr1++;
+            }
+            if(buffer_n == SCREEN_BUFFER)
+            {
+                screen_write_buffer(buffer_n);
+                buffer_n = 0;
+            }
+        }
+        if(dreamit_LOGO_Bot.Width % 8 != 0)
+        {
+            ptr0++;
+            ptr1++;
+        }
+    }
+    if(buffer_n != 0) screen_write_buffer(buffer_n);
 }
 
 static void screen_big_logo(POINT Xpoint, POINT Ypoint)
 {
-    screen_draw_from_rom(Xpoint, Ypoint, &dreamit_LOGO_Big_Top);
-    screen_draw_from_rom(Xpoint, Ypoint, &dreamit_LOGO_Big_Bot);
-    screen_draw_from_rom(Xpoint, Ypoint, &dreamit_LOGO_Big_Text);
+    POINT Page, Column;
+    uint32_t buffer_n = 0;
+
+    if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page)
+    {
+        ESP_LOGD(TAG, "screen_logo Input exceeds the normal display range\r\n");
+        return;
+    }
+    const unsigned char *ptr0 = dreamit_LOGO_Big_Top.table;
+    const unsigned char *ptr1 = dreamit_LOGO_Big_Bot.table;
+    const unsigned char *ptr2 = dreamit_LOGO_Big_Text.table;
+
+    screen_set_window(Xpoint, Ypoint, Xpoint + dreamit_LOGO_Big_Top.Width, Ypoint + dreamit_LOGO_Big_Top.Height);
+    for(Page = 0; Page < dreamit_LOGO_Big_Top.Height; Page++)
+    {
+        for(Column = 0; Column < dreamit_LOGO_Big_Top.Width; Column++)
+        {
+            if     (*ptr0 & (0x80 >> (Column % 8))) tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(dreamit_LOGO_Big_Top.color, 16);
+            else if(*ptr1 & (0x80 >> (Column % 8))) tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(dreamit_LOGO_Big_Bot.color, 16);
+            else if(*ptr2 & (0x80 >> (Column % 8))) tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(dreamit_LOGO_Big_Text.color, 16);
+            else tx_data_16b[buffer_n++] = SPI_SWAP_DATA_TX(LCD_WHITE, 16);
+            if(Column % 8 == 7)
+            {
+                ptr0++;
+                ptr1++;
+                ptr2++;
+            }
+            if(buffer_n == SCREEN_BUFFER)
+            {
+                screen_write_buffer(buffer_n);
+                buffer_n = 0;
+            }
+        }
+        if(dreamit_LOGO_Big_Top.Width % 8 != 0)
+        {
+            ptr0++;
+            ptr1++;
+            ptr2++;
+        }
+    }
+    if(buffer_n != 0) screen_write_buffer(buffer_n);
 }
 
-void screen_cross(POINT Xpoint, POINT Ypoint)
+static void screen_cross()
 {
-    screen_draw_from_rom(Xpoint, Ypoint, &cross_Sign);
+    screen_clear(LCD_RED);
+    screen_draw_from_rom(sLCD_DIS.LCD_Dis_Column/2 - circle_Sign.Width /2,
+                         sLCD_DIS.LCD_Dis_Page  /2 - circle_Sign.Height/2 - 40,
+                         &circle_Sign, LCD_RED);
+    screen_draw_from_rom(sLCD_DIS.LCD_Dis_Column/2 - cross_Sign.Width /2,
+                         sLCD_DIS.LCD_Dis_Page  /2 - cross_Sign.Height/2  - 40,
+                         &cross_Sign, LCD_WHITE);
+    screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*4,
+                      sLCD_DIS.LCD_Dis_Page  /2 - circle_Sign.Height/2 + 180,
+                      "DENEGADO", &Font24, LCD_RED, LCD_WHITE);
 }
 
-void screen_check(POINT Xpoint, POINT Ypoint)
+static void screen_check()
 {
-    screen_draw_from_rom(Xpoint, Ypoint, &check_Sign);
+    screen_clear(LCD_GREEN);
+    screen_draw_from_rom(sLCD_DIS.LCD_Dis_Column/2 - circle_Sign.Width /2,
+                         sLCD_DIS.LCD_Dis_Page  /2 - circle_Sign.Height/2 - 40,
+                         &circle_Sign, LCD_GREEN);
+    screen_draw_from_rom(sLCD_DIS.LCD_Dis_Column/2 - check_Sign.Width /2,
+                         sLCD_DIS.LCD_Dis_Page  /2 - check_Sign.Height/2  - 40,
+                         &check_Sign, LCD_WHITE);
+    screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*4,
+                      sLCD_DIS.LCD_Dis_Page  /2 - circle_Sign.Height/2 + 180,
+                      "APROBADO", &Font24, LCD_GREEN, LCD_WHITE);
 }
 
 void screen_print_conf(char *text)
@@ -561,6 +625,10 @@ void screen_print_conf(char *text)
 
 void screen_task(void *arg)
 {
+    enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
+    uint8_t qrcode[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
+    uint8_t temp_buffer[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
+
     screen_clear(LCD_BACKGROUND);
     screen_big_logo((QR_SIZE*21 + 2*QR_OFFSET + sLCD_DIS.LCD_Dis_Column - dreamit_LOGO_Big_Top.Width)/2,
                     sLCD_DIS.LCD_Dis_Page/2 - dreamit_LOGO_Big_Top.Height/2);
@@ -569,38 +637,73 @@ void screen_task(void *arg)
                           QR_SIZE*21 + 3*QR_OFFSET/2,
                           QR_SIZE*21 + 3*QR_OFFSET/2,
                           LCD_LOGO_BOT, DRAW_EMPTY, DOT_PIXEL_DFT);
-    enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
-    uint8_t qrcode[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
-    uint8_t temp_buffer[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
+
     while(1)
     {
-        if(xQueueReceive(screen_task_queue, &status, portMAX_DELAY))
+        if(xQueueReceive(screen_task_queue, &screen_task_data, portMAX_DELAY))
         {
-            qrcodegen_encodeText(status,
-                                 temp_buffer,
-                                 qrcode,
-                                 errCorLvl,
-                                 qrcodegen_VERSION_MIN,
-                                 qrcodegen_VERSION_MAX,
-                                 qrcodegen_Mask_AUTO,
-                                 true);
-            int size = qrcodegen_getSize(qrcode);
-            for(int i = 0; i < size; i++)
+            if(screen_task_data.status == 0)
             {
-                for(int j = 0; j < size; j++)
+                qrcodegen_encodeText(screen_task_data.msg,
+                                     temp_buffer,
+                                     qrcode,
+                                     errCorLvl,
+                                     qrcodegen_VERSION_MIN,
+                                     qrcodegen_VERSION_MAX,
+                                     qrcodegen_Mask_AUTO,
+                                     true);
+                int size = qrcodegen_getSize(qrcode);
+                for(int i = 0; i < size; i++)
                 {
-                    if(qrcodegen_getModule(qrcode, i, j))
-                        screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
-                                              j*QR_SIZE + QR_OFFSET,
-                                          (i+1)*QR_SIZE + QR_OFFSET,
-                                          (j+1)*QR_SIZE + QR_OFFSET,
-                                          LCD_BLACK, DRAW_FULL, DOT_PIXEL_DFT);
-                    else
-                        screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
-                                              j*QR_SIZE + QR_OFFSET,
-                                          (i+1)*QR_SIZE + QR_OFFSET,
-                                          (j+1)*QR_SIZE + QR_OFFSET,
-                                          LCD_WHITE, DRAW_FULL, DOT_PIXEL_DFT);
+                    for(int j = 0; j < size; j++)
+                    {
+                        if(qrcodegen_getModule(qrcode, i, j))
+                            screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
+                                                  j*QR_SIZE + QR_OFFSET,
+                                              (i+1)*QR_SIZE + QR_OFFSET,
+                                              (j+1)*QR_SIZE + QR_OFFSET,
+                                              LCD_BLACK, DRAW_FULL, DOT_PIXEL_DFT);
+                        else
+                            screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
+                                                  j*QR_SIZE + QR_OFFSET,
+                                              (i+1)*QR_SIZE + QR_OFFSET,
+                                              (j+1)*QR_SIZE + QR_OFFSET,
+                                                 LCD_WHITE, DRAW_FULL, DOT_PIXEL_DFT);
+                    }
+                }
+            }
+            else if(screen_task_data.status == 1)
+            {
+                if(strcmp(screen_task_data.msg, "GOOD") == 0) screen_check();
+                else if(strcmp(screen_task_data.msg, "BAD") == 0) screen_cross();
+                vTaskDelay(screen_task_data.timer*1000/portTICK_PERIOD_MS);
+
+                screen_clear(LCD_BACKGROUND);
+                screen_big_logo((QR_SIZE*21 + 2*QR_OFFSET + sLCD_DIS.LCD_Dis_Column - dreamit_LOGO_Big_Top.Width)/2,
+                                sLCD_DIS.LCD_Dis_Page/2 - dreamit_LOGO_Big_Top.Height/2);
+                screen_draw_rectangle(               QR_OFFSET/2,
+                                                     QR_OFFSET/2,
+                                      QR_SIZE*21 + 3*QR_OFFSET/2,
+                                      QR_SIZE*21 + 3*QR_OFFSET/2,
+                                      LCD_LOGO_BOT, DRAW_EMPTY, DOT_PIXEL_DFT);
+                int size = qrcodegen_getSize(qrcode);
+                for(int i = 0; i < size; i++)
+                {
+                    for(int j = 0; j < size; j++)
+                    {
+                        if(qrcodegen_getModule(qrcode, i, j))
+                            screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
+                                                  j*QR_SIZE + QR_OFFSET,
+                                              (i+1)*QR_SIZE + QR_OFFSET,
+                                              (j+1)*QR_SIZE + QR_OFFSET,
+                                              LCD_BLACK, DRAW_FULL, DOT_PIXEL_DFT);
+                        else
+                            screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
+                                                  j*QR_SIZE + QR_OFFSET,
+                                              (i+1)*QR_SIZE + QR_OFFSET,
+                                              (j+1)*QR_SIZE + QR_OFFSET,
+                                                 LCD_WHITE, DRAW_FULL, DOT_PIXEL_DFT);
+                    }
                 }
             }
         }
