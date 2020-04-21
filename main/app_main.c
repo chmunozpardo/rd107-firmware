@@ -79,7 +79,11 @@ static void setup()
     screen_init();
     wiegand_init();
 
-    TP_Dialog();
+    xTaskCreatePinnedToCore(debounce_task , "dbn_task", 4096, NULL, 1, NULL, 0);
+
+    //TP_Dialog();
+    screen_cross(50, 50);
+    screen_check(200, 50);
     for(;;){;}
 
     // Initiate WiFi configurations
@@ -96,12 +100,12 @@ static void setup()
     esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(1));
 
     // 
-    xTaskCreatePinnedToCore(screen_task , "scr_task", 4096, NULL, 1,  &screen_task_handle , 0);
-    xTaskCreatePinnedToCore(rgb_task    , "rgb_task", 2048, NULL, 1,  &rgb_task_handle    , 0);
-    xTaskCreatePinnedToCore(relay_task  , "rly_task", 2048, NULL, 1,  &relay_task_handle  , 0);
-    xTaskCreatePinnedToCore(buzzer_task , "bzr_task", 2048, NULL, 1,  &buzzer_task_handle , 0);
-    xTaskCreatePinnedToCore(data_task   , "dat_task", 4096, NULL, 1,  &data_task_handle   , 1);
-    xTaskCreatePinnedToCore(wiegand_task, "wgn_task", 2048, NULL, 0,  &wiegand_task_handle, 1);
+    xTaskCreatePinnedToCore(screen_task , "scr_task", 4096, NULL, 1, &screen_task_handle , 0);
+    xTaskCreatePinnedToCore(rgb_task    , "rgb_task", 2048, NULL, 1, &rgb_task_handle    , 0);
+    xTaskCreatePinnedToCore(relay_task  , "rly_task", 2048, NULL, 1, &relay_task_handle  , 0);
+    xTaskCreatePinnedToCore(buzzer_task , "bzr_task", 2048, NULL, 1, &buzzer_task_handle , 0);
+    xTaskCreatePinnedToCore(data_task   , "dat_task", 4096, NULL, 1, &data_task_handle   , 1);
+    xTaskCreatePinnedToCore(wiegand_task, "wgn_task", 2048, NULL, 0, &wiegand_task_handle, 1);
 }
 
 void app_main()

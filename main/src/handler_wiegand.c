@@ -5,7 +5,7 @@ static const char *TAG = "wiegand_handler";
 
 static DRAM_ATTR xQueueHandle wiegand_reader_queue = NULL;
 
-static DRAM_ATTR  uint8_t input_read[2] = {0, 0};
+static DRAM_ATTR uint8_t input_read[2] = {0, 0};
 static DRAM_ATTR uint8_t count         = 0;
 static DRAM_ATTR uint64_t store_card   = 0;
 
@@ -14,10 +14,7 @@ static IRAM_ATTR void wiegand_isr(void* arg)
     BaseType_t xTaskWokenByReceive = pdFALSE;
     uint8_t input_read_isr[2] = {gpio_get_level(WIEGAND_D0), gpio_get_level(WIEGAND_D1)};
     xQueueSendFromISR(wiegand_reader_queue, &input_read_isr, &xTaskWokenByReceive);
-    if( xTaskWokenByReceive != pdFALSE )
-    {
-        portYIELD_FROM_ISR();
-    }
+    if(xTaskWokenByReceive != pdFALSE) portYIELD_FROM_ISR();
 }
 
 void wiegand_init(void)

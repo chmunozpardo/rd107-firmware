@@ -506,7 +506,7 @@ static void screen_logo(POINT Xpoint, POINT Ypoint)
     }
 }
 
-static void screen_big_logo(POINT Xpoint, POINT Ypoint)
+static void screen_draw_from_rom(POINT Xpoint, POINT Ypoint, sFONT *table)
 {
     POINT Page, Column;
 
@@ -515,51 +515,37 @@ static void screen_big_logo(POINT Xpoint, POINT Ypoint)
         ESP_LOGD(TAG, "screen_logo Input exceeds the normal display range\r\n");
         return;
     }
+    const unsigned char *ptr = table->table;
 
-    const unsigned char *ptr = dreamit_LOGO_Big_Top.table;
-
-    for(Page = 0; Page < dreamit_LOGO_Big_Top.Height; Page++)
+    for(Page = 0; Page < table->Height; Page++)
     {
-        for(Column = 0; Column < dreamit_LOGO_Big_Top.Width; Column++)
+        for(Column = 0; Column < table->Width; Column++)
         {
             if(*ptr & (0x80 >> (Column % 8)))
             {
-                screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_TOP, DOT_PIXEL_DFT, DOT_STYLE_DFT);
+                screen_draw_point(Xpoint + Column, Ypoint + Page, table->color, DOT_PIXEL_DFT, DOT_STYLE_DFT);
             }
             if(Column % 8 == 7) ptr++;
         }
-        if(dreamit_LOGO_Big_Top.Width % 8 != 0) ptr++;
+        if(table->Width % 8 != 0) ptr++;
     }
+}
 
-    ptr = dreamit_LOGO_Big_Bot.table;
+static void screen_big_logo(POINT Xpoint, POINT Ypoint)
+{
+    screen_draw_from_rom(Xpoint, Ypoint, &dreamit_LOGO_Big_Top);
+    screen_draw_from_rom(Xpoint, Ypoint, &dreamit_LOGO_Big_Bot);
+    screen_draw_from_rom(Xpoint, Ypoint, &dreamit_LOGO_Big_Text);
+}
 
-    for(Page = 0; Page < dreamit_LOGO_Big_Bot.Height; Page++)
-    {
-        for(Column = 0; Column < dreamit_LOGO_Big_Bot.Width; Column++)
-        {
-            if(*ptr & (0x80 >> (Column % 8)))
-            {
-                        screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_BOT, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-            }
-            if(Column % 8 == 7) ptr++;
-        }
-        if(dreamit_LOGO_Big_Bot.Width % 8 != 0) ptr++;
-    }
+void screen_cross(POINT Xpoint, POINT Ypoint)
+{
+    screen_draw_from_rom(Xpoint, Ypoint, &cross_Sign);
+}
 
-    ptr = dreamit_LOGO_Big_Text.table;
-
-    for(Page = 0; Page < dreamit_LOGO_Big_Text.Height; Page++)
-    {
-        for(Column = 0; Column < dreamit_LOGO_Big_Text.Width; Column++)
-        {
-            if(*ptr & (0x80 >> (Column % 8)))
-            {
-                        screen_draw_point(Xpoint + Column, Ypoint + Page, LCD_LOGO_TEXT, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-            }
-            if(Column % 8 == 7) ptr++;
-        }
-        if(dreamit_LOGO_Big_Text.Width % 8 != 0) ptr++;
-    }
+void screen_check(POINT Xpoint, POINT Ypoint)
+{
+    screen_draw_from_rom(Xpoint, Ypoint, &check_Sign);
 }
 
 void screen_print_conf(char *text)

@@ -182,6 +182,9 @@
 #define LCD_LOGO_BOT    0x3a8c
 #define LCD_LOGO_TEXT   0x9515
 
+#define TOUCH_READ_N    4
+#define TOUCH_STD_RANGE 30
+
 #define WIEGAND_D0    14
 #define WIEGAND_D1    17
 
@@ -198,6 +201,7 @@ typedef struct _tFont
     const uint8_t *table;
     uint16_t Width;
     uint16_t Height;
+    COLOR color;
 } sFONT;
 
 typedef enum {
@@ -328,6 +332,9 @@ extern sFONT dreamit_LOGO_Bot;
 extern sFONT dreamit_LOGO_Big_Top;
 extern sFONT dreamit_LOGO_Big_Bot;
 extern sFONT dreamit_LOGO_Big_Text;
+
+extern sFONT cross_Sign;
+extern sFONT check_Sign;
 
 extern DEV_TIME sDev_time;
 extern LCD_DIS sLCD_DIS;

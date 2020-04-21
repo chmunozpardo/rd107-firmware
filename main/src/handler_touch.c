@@ -2,82 +2,78 @@
 #include "handler_touch.h"
 #include "handler_screen.h"
 
-#define READ_TIMES  4
-#define LOST_NUM    0
-#define ERR_RANGE   50
+static DRAM_ATTR xQueueHandle debounce_queue = NULL;
 
 static TP_DEV sTP_DEV;
 static TP_DRAW sTP_Draw;
 
-static portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+static DRAM_ATTR uint8_t debounce_touch = 0;
 
-static uint64_t prevT = 0;
-static uint64_t currT = 0;
-
-static IRAM_ATTR void touch_isr(void* arg)
+static IRAM_ATTR void debounce_isr(void* arg)
 {
-    currT = esp_timer_get_time();
-    portENTER_CRITICAL_ISR(&timerMux);
-    vTaskDelay(1000/portTICK_PERIOD_MS);
-    if(!gpio_get_level(LCD_PIN_IRQ))
+    BaseType_t xTaskWokenByReceive = pdFALSE;
+    uint8_t debounce_touch_isr = gpio_get_level(LCD_PIN_IRQ);
+    if(debounce_touch_isr == 0) xQueueSendFromISR(debounce_queue, &debounce_touch_isr, &xTaskWokenByReceive);
+    if(xTaskWokenByReceive != pdFALSE) portYIELD_FROM_ISR();
+}
+
+static uint16_t touch_read_adc(uint8_t cmd)
+{
+    uint16_t data = 0;
+    data = screen_read_byte(cmd);
+    return data;
+}
+
+static void touch_read_adc_average(uint8_t cmd, uint16_t *mean_ptr, float *std_ptr)
+{
+    float std                 =  0;
+    float std_tmp             =  0;
+    uint8_t i                 =  0;
+    uint16_t mean             =  0;
+    uint16_t buf[TOUCH_READ_N]  = {0};
+
+    for (i = 0; i < TOUCH_READ_N; i++)
     {
-        ets_printf("Diff = %llu\n", currT - prevT);
+        buf[i] = touch_read_adc(cmd);
+        mean  += buf[i];
     }
-    portEXIT_CRITICAL_ISR(&timerMux);
-    prevT = currT;
-}
 
-static uint16_t TP_Read_ADC(unsigned char CMD)
-{
-    uint16_t Data = 0;
-    Data = screen_read_byte(CMD);
-    return Data;
-}
+    *mean_ptr = mean / TOUCH_READ_N;
 
-static uint16_t TP_Read_ADC_Average(unsigned char Channel_Cmd)
-{
-    unsigned char i;
-    uint16_t Read_Sum = 0, Read_Temp = 0;
-
-    for (i = 0; i < READ_TIMES; i++) Read_Sum += TP_Read_ADC(Channel_Cmd);
-    Read_Temp = Read_Sum / READ_TIMES;
-    return Read_Temp;
-}
-
-static void TP_Read_ADC_XY(uint16_t *pXCh_Adc, uint16_t *pYCh_Adc)
-{
-    *pXCh_Adc = TP_Read_ADC_Average(0xDC);
-    *pYCh_Adc = TP_Read_ADC_Average(0x9C);
-}
-
-static bool TP_Read_TwiceADC(uint16_t *pXCh_Adc, uint16_t *pYCh_Adc)
-{
-    uint16_t XCh_Adc1, YCh_Adc1, XCh_Adc2, YCh_Adc2;
-
-    TP_Read_ADC_XY(&XCh_Adc1, &YCh_Adc1);
-    TP_Read_ADC_XY(&XCh_Adc2, &YCh_Adc2);
-
-    if( ((XCh_Adc2 <= XCh_Adc1 && XCh_Adc1 < XCh_Adc2 + ERR_RANGE) ||
-        (XCh_Adc1 <= XCh_Adc2 && XCh_Adc2 < XCh_Adc1 + ERR_RANGE))
-       && ((YCh_Adc2 <= YCh_Adc1 && YCh_Adc1 < YCh_Adc2 + ERR_RANGE) ||
-           (YCh_Adc1 <= YCh_Adc2 && YCh_Adc2 < YCh_Adc1 + ERR_RANGE)))
+    for (i = 0; i < TOUCH_READ_N; i++)
     {
-        *pXCh_Adc = (XCh_Adc1 + XCh_Adc2) / 2;
-        *pYCh_Adc = (YCh_Adc1 + YCh_Adc2) / 2;
+        std_tmp = (float)buf[i] - (float)*mean_ptr;
+        std    += std_tmp * std_tmp;
+    }
+    *std_ptr = sqrt(std / TOUCH_READ_N);
+}
+
+static bool touch_read_xy(uint16_t *x_ch_mean, uint16_t *y_ch_mean)
+{
+    float x_std, y_std;
+    uint16_t x_mean, y_mean;
+
+    touch_read_adc_average(0xDC, &x_mean, &x_std);
+    touch_read_adc_average(0x9C, &y_mean, &y_std);
+
+    if(x_std < TOUCH_STD_RANGE && y_std < TOUCH_STD_RANGE)
+    {
+        *x_ch_mean = x_mean;
+        *y_ch_mean = y_mean;
         return true;
     }
     return false;
 }
 
-static unsigned char TP_Scan(unsigned char chCoordType)
+static unsigned char touch_input(unsigned char chCoordType)
 {
     if(!gpio_get_level(LCD_PIN_IRQ))
     {
         if(chCoordType)
         {
-            TP_Read_TwiceADC(&sTP_DEV.Xpoint, &sTP_DEV.Ypoint);
+            touch_read_xy(&sTP_DEV.Xpoint, &sTP_DEV.Ypoint);
         }
-        else if(TP_Read_TwiceADC(&sTP_DEV.Xpoint, &sTP_DEV.Ypoint))
+        else if(touch_read_xy(&sTP_DEV.Xpoint, &sTP_DEV.Ypoint))
         {
             if(sTP_DEV.TP_Scan_Dir == R2L_D2U)
             {
@@ -138,30 +134,31 @@ static unsigned char TP_Scan(unsigned char chCoordType)
 
 void touch_init(void)
 {
+    debounce_queue = xQueueCreate(10, sizeof(uint8_t) * 1);
     sTP_DEV.TP_Scan_Dir = SCAN_DIR_DFT;
 
-    if( sTP_DEV.TP_Scan_Dir == D2U_L2R)
+    if(sTP_DEV.TP_Scan_Dir == D2U_L2R)
     {
         sTP_DEV.fXfac = -0.132443F;
         sTP_DEV.fYfac = 0.089997F;
         sTP_DEV.iXoff = 516L;
         sTP_DEV.iYoff = -22L;
     }
-    else if( sTP_DEV.TP_Scan_Dir == L2R_U2D)
+    else if(sTP_DEV.TP_Scan_Dir == L2R_U2D)
     {
         sTP_DEV.fXfac = 0.089697F;
         sTP_DEV.fYfac = 0.134792F;
         sTP_DEV.iXoff = -21L;
         sTP_DEV.iYoff = -39L;
     }
-    else if( sTP_DEV.TP_Scan_Dir == R2L_D2U)
+    else if(sTP_DEV.TP_Scan_Dir == R2L_D2U)
     {
         sTP_DEV.fXfac = 0.089915F;
         sTP_DEV.fYfac =  0.133178F;
         sTP_DEV.iXoff = -22L;
         sTP_DEV.iYoff = -38L;
     }
-    else if( sTP_DEV.TP_Scan_Dir == U2D_R2L)
+    else if(sTP_DEV.TP_Scan_Dir == U2D_R2L)
     {
         sTP_DEV.fXfac = -0.132906F;
         sTP_DEV.fYfac = 0.087964F;
@@ -169,12 +166,10 @@ void touch_init(void)
         sTP_DEV.iYoff = -20L;
     }
 
-    TP_Read_ADC_XY(&sTP_DEV.Xpoint, &sTP_DEV.Ypoint);
-
     gpio_pad_select_gpio(LCD_PIN_IRQ);
     gpio_set_direction(LCD_PIN_IRQ, GPIO_MODE_INPUT);
     gpio_set_intr_type(LCD_PIN_IRQ, GPIO_INTR_NEGEDGE);
-    gpio_isr_handler_add(LCD_PIN_IRQ, touch_isr, (void*) NULL);
+    gpio_isr_handler_add(LCD_PIN_IRQ, debounce_isr, (void*) NULL);
 }
 
 void TP_Dialog(void)
@@ -208,17 +203,16 @@ void TP_Dialog(void)
                          "CLEAR", &Font16, LCD_RED, LCD_BLUE);
         screen_print_text(sLCD_DIS.LCD_Dis_Column - 120, 0,
                          "AD", &Font24, LCD_RED, LCD_BLUE);
-        screen_draw_rectangle(20, 20, 70, 70, LCD_BLUE, DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle(80, 20, 130, 70, LCD_GREEN, DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle(140, 20, 190, 70, LCD_RED, DRAW_FULL, DOT_PIXEL_1X1);
+        screen_draw_rectangle( 20, 20,  70, 70, LCD_BLUE  , DRAW_FULL, DOT_PIXEL_1X1);
+        screen_draw_rectangle( 80, 20, 130, 70, LCD_GREEN , DRAW_FULL, DOT_PIXEL_1X1);
+        screen_draw_rectangle(140, 20, 190, 70, LCD_RED   , DRAW_FULL, DOT_PIXEL_1X1);
         screen_draw_rectangle(200, 20, 250, 70, LCD_YELLOW, DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle(260, 20, 310, 70, LCD_BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+        screen_draw_rectangle(260, 20, 310, 70, LCD_BLACK , DRAW_FULL, DOT_PIXEL_1X1);
     }
 }
 
 void TP_DrawBoard(void)
 {
-    TP_Scan(0);
     if(sTP_DEV.chStatus & TP_PRESS_DOWN)
     {
         if(sTP_Draw.Xpoint < sLCD_DIS.LCD_Dis_Column &&
@@ -329,6 +323,26 @@ void TP_DrawBoard(void)
                                       DOT_FILL_RIGHTUP);
                 }
             }
+        }
+    }
+}
+
+void IRAM_ATTR debounce_task(void *arg)
+{
+    uint8_t state = 0;
+    while(1)
+    {
+        if(xQueueReceive(debounce_queue, &debounce_touch, 150/portTICK_PERIOD_MS))
+        {
+            state = 1;
+        }
+        else if(state == 1)
+        {
+            gpio_isr_handler_remove(LCD_PIN_IRQ);
+            state = 0;
+            touch_input(0);
+            TP_DrawBoard();
+            gpio_isr_handler_add(LCD_PIN_IRQ, debounce_isr, (void*) NULL);
         }
     }
 }

@@ -120,9 +120,6 @@ void spi_init()
     gpio_pad_select_gpio(TOUCH_PIN_CS);
     gpio_set_direction(TOUCH_PIN_CS, GPIO_MODE_OUTPUT);
     gpio_set_level(TOUCH_PIN_CS, 1);
-
-    gpio_pad_select_gpio(LCD_PIN_IRQ);
-    gpio_set_direction(LCD_PIN_IRQ, GPIO_MODE_INPUT);
 }
 
 void rgb_spi_transmit(void)
