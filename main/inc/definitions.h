@@ -38,6 +38,8 @@
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
 
+#define DISPLAY_TIME    2
+
 #define COLOR           uint16_t
 #define POINT           uint16_t
 #define LENGTH          uint16_t

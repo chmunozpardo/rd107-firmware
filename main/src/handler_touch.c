@@ -213,6 +213,7 @@ void TP_Dialog(void)
 
 void TP_DrawBoard(void)
 {
+    const char *keyboard_str = "123456789<0>";
     if(sTP_DEV.chStatus & TP_PRESS_DOWN)
     {
         if(sTP_Draw.Xpoint < sLCD_DIS.LCD_Dis_Column &&
@@ -220,63 +221,23 @@ void TP_DrawBoard(void)
         {
             if(sLCD_DIS.LCD_Dis_Column > sLCD_DIS.LCD_Dis_Page)
             {
-                if(sTP_Draw.Xpoint > (sLCD_DIS.LCD_Dis_Column - 60) &&
-                   sTP_Draw.Ypoint < 16)
+                for(int j = 0; j < 4;j++)
                 {
-                    TP_Dialog();
-                }
-                else if(sTP_Draw.Xpoint > (sLCD_DIS.LCD_Dis_Column - 120) &&
-                        sTP_Draw.Xpoint < (sLCD_DIS.LCD_Dis_Column -  80) &&
-                        sTP_Draw.Ypoint < 24)
-                {
-                    TP_Dialog();
-                } 
-                else if(sTP_Draw.Xpoint > (sLCD_DIS.LCD_Dis_Column - 50) &&
-                        sTP_Draw.Xpoint < sLCD_DIS.LCD_Dis_Column &&
-                        sTP_Draw.Ypoint > 20 &&
-                        sTP_Draw.Ypoint < 70)
-                {
-                    sTP_Draw.Color = LCD_BLUE;
-                }
-                else if(sTP_Draw.Xpoint > (sLCD_DIS.LCD_Dis_Column - 50) &&
-                        sTP_Draw.Xpoint < sLCD_DIS.LCD_Dis_Column &&
-                        sTP_Draw.Ypoint > 80 &&
-                        sTP_Draw.Ypoint < 130)
-                {
-                    sTP_Draw.Color = LCD_GREEN;
-                }
-                else if(sTP_Draw.Xpoint > (sLCD_DIS.LCD_Dis_Column - 50) &&
-                        sTP_Draw.Xpoint < sLCD_DIS.LCD_Dis_Column &&
-                        sTP_Draw.Ypoint > 140 &&
-                        sTP_Draw.Ypoint < 190)
-                {
-                    sTP_Draw.Color = LCD_RED;
-                }
-                else if(sTP_Draw.Xpoint > (sLCD_DIS.LCD_Dis_Column - 50) &&
-                        sTP_Draw.Xpoint < sLCD_DIS.LCD_Dis_Column &&
-                        sTP_Draw.Ypoint > 200 && sTP_Draw.Ypoint < 250)
-                {
-                    sTP_Draw.Color = LCD_YELLOW;
-                }
-                else if(sTP_Draw.Xpoint > (sLCD_DIS.LCD_Dis_Column - 50) &&
-                        sTP_Draw.Xpoint < sLCD_DIS.LCD_Dis_Column &&
-                        sTP_Draw.Ypoint > 260 &&
-                        sTP_Draw.Ypoint < 310)
-                {
-                    sTP_Draw.Color = LCD_BLACK;
-                }
-                else
-                {
-                    screen_draw_point(sTP_Draw.Xpoint, sTP_Draw.Ypoint,
-                                      sTP_Draw.Color , DOT_PIXEL_1X1, DOT_FILL_RIGHTUP);
-                    screen_draw_point(sTP_Draw.Xpoint + 1, sTP_Draw.Ypoint,
-                                      sTP_Draw.Color , DOT_PIXEL_1X1, DOT_FILL_RIGHTUP);
-                    screen_draw_point(sTP_Draw.Xpoint, sTP_Draw.Ypoint + 1,
-                                      sTP_Draw.Color , DOT_PIXEL_1X1, DOT_FILL_RIGHTUP);
-                    screen_draw_point(sTP_Draw.Xpoint + 1, sTP_Draw.Ypoint + 1,
-                                      sTP_Draw.Color , DOT_PIXEL_1X1, DOT_FILL_RIGHTUP);
-                    screen_draw_point(sTP_Draw.Xpoint, sTP_Draw.Ypoint,
-                                      sTP_Draw.Color , DOT_PIXEL_2X2, DOT_FILL_RIGHTUP);
+                    for(int i = 0; i < 3;i++)
+                    {
+                        if(sTP_Draw.Xpoint >= QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
+                           sTP_Draw.Xpoint <= QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
+                           sTP_Draw.Ypoint >= sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20 &&
+                           sTP_Draw.Ypoint <= sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20)
+                        {
+                            screen_print_char(QR_OFFSET + (sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/2 - Font24.Width/2,
+                                              QR_OFFSET*3,
+                                              *(keyboard_str + i + 3*j),
+                                              &Font24,
+                                              LCD_WHITE,
+                                              LCD_BLACK);
+                        }
+                    }
                 }
             }
             else

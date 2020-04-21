@@ -55,14 +55,14 @@ void IRAM_ATTR search_card(uint8_t size, uint64_t value)
     if(status)
     {
         ESP_LOGD(TAG, " --> Card found <--");
-        SCREEN_SIGNAL("GOOD", 1, 2);
-        RGB_SIGNAL(RGB_GREEN, RGB_LEDS, 1);
+        SCREEN_SIGNAL("GOOD", 1, DISPLAY_TIME);
+        RGB_SIGNAL(RGB_GREEN, RGB_LEDS, DISPLAY_TIME);
     }
     else
     {
         ESP_LOGD(TAG, " --> Card not found <--");
-        SCREEN_SIGNAL("BAD", 1, 2);
-        RGB_SIGNAL(RGB_RED, RGB_LEDS, 1);
+        SCREEN_SIGNAL("BAD", 1, DISPLAY_TIME);
+        RGB_SIGNAL(RGB_RED, RGB_LEDS, DISPLAY_TIME);
     }
     RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
 }
@@ -96,14 +96,14 @@ void IRAM_ATTR search_reservation_qr(char *qr)
     if(status == 0)
     {
         ESP_LOGD(TAG, " --> Reservation found <--");
-        SCREEN_SIGNAL("GOOD", 1, 2);
-        RGB_SIGNAL(RGB_GREEN, RGB_LEDS, 1);
+        SCREEN_SIGNAL("GOOD", 1, DISPLAY_TIME);
+        RGB_SIGNAL(RGB_GREEN, RGB_LEDS, DISPLAY_TIME);
     }
     else
     {
         ESP_LOGD(TAG, " --> Reservation not found <--");
-        SCREEN_SIGNAL("BAD", 1, 2);
-        RGB_SIGNAL(RGB_RED, RGB_LEDS, 1);
+        SCREEN_SIGNAL("BAD", 1, DISPLAY_TIME);
+        RGB_SIGNAL(RGB_RED, RGB_LEDS, DISPLAY_TIME);
     }
     RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
 }
@@ -137,14 +137,14 @@ void IRAM_ATTR search_reservation_code(char *code)
     if(status == 0)
     {
         ESP_LOGD(TAG, " --> Reservation found <--");
-        SCREEN_SIGNAL("GOOD", 1, 2);
-        RGB_SIGNAL(RGB_GREEN, RGB_LEDS, 1);
+        SCREEN_SIGNAL("GOOD", 1, DISPLAY_TIME);
+        RGB_SIGNAL(RGB_GREEN, RGB_LEDS, DISPLAY_TIME);
     }
     else
     {
         ESP_LOGD(TAG, " --> Reservation not found <--");
-        SCREEN_SIGNAL("BAD", 1, 2);
-        RGB_SIGNAL(RGB_RED, RGB_LEDS, 1);
+        SCREEN_SIGNAL("BAD", 1, DISPLAY_TIME);
+        RGB_SIGNAL(RGB_RED, RGB_LEDS, DISPLAY_TIME);
     }
     RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
 }

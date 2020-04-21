@@ -623,21 +623,90 @@ void screen_print_conf(char *text)
     screen_draw_rectangle(10, 214, sLCD_DIS.LCD_Dis_Column - 10, 220, LCD_LOGO_BOT, DRAW_FULL, DOT_PIXEL_DFT);
 }
 
-void screen_task(void *arg)
+static void screen_interface()
 {
-    enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
-    uint8_t qrcode[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
-    uint8_t temp_buffer[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
-
     screen_clear(LCD_BACKGROUND);
-    screen_big_logo((QR_SIZE*21 + 2*QR_OFFSET + sLCD_DIS.LCD_Dis_Column - dreamit_LOGO_Big_Top.Width)/2,
-                    sLCD_DIS.LCD_Dis_Page/2 - dreamit_LOGO_Big_Top.Height/2);
+    screen_big_logo((QR_SIZE*21 + 2*QR_OFFSET + sLCD_DIS.LCD_Dis_Column - dreamit_LOGO_Big_Top.Width)/2, QR_OFFSET);
     screen_draw_rectangle(               QR_OFFSET/2,
                                          QR_OFFSET/2,
                           QR_SIZE*21 + 3*QR_OFFSET/2,
                           QR_SIZE*21 + 3*QR_OFFSET/2,
                           LCD_LOGO_BOT, DRAW_EMPTY, DOT_PIXEL_DFT);
+    screen_draw_rectangle(5*QR_OFFSET/2 + QR_SIZE*21,
+                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  20,
+                          sLCD_DIS.LCD_Dis_Column - QR_OFFSET,
+                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  50,
+                           LCD_GRAY, DRAW_FULL, DOT_PIXEL_DFT);
+    screen_draw_rectangle(5*QR_OFFSET/2 + QR_SIZE*21,
+                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  20,
+                          sLCD_DIS.LCD_Dis_Column - QR_OFFSET,
+                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  50,
+                           LCD_CYAN, DRAW_EMPTY, DOT_PIXEL_DFT);
 
+    screen_draw_rectangle(5*QR_OFFSET/2 + QR_SIZE*21,
+                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  80,
+                          sLCD_DIS.LCD_Dis_Column - QR_OFFSET,
+                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 110,
+                           LCD_GRAY, DRAW_FULL, DOT_PIXEL_DFT);
+    screen_draw_rectangle(5*QR_OFFSET/2 + QR_SIZE*21,
+                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  80,
+                          sLCD_DIS.LCD_Dis_Column - QR_OFFSET,
+                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 110,
+                           LCD_CYAN, DRAW_EMPTY, DOT_PIXEL_DFT);
+}
+
+void screen_draw_input_interface(void)
+{
+    screen_clear(LCD_BACKGROUND);
+    const char *keyboard_str = "123456789<0>";
+    for(int j = 0; j < 4;j++)
+    {
+        for(int i = 0; i < 3;i++)
+        {
+            screen_draw_rectangle(QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3,
+                                  sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20,
+                                  QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3,
+                                  sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20,
+                                  LCD_GRAY, DRAW_EMPTY, DOT_PIXEL_DFT);
+            screen_print_char(QR_OFFSET + (2*i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/6 - Font24.Width/2,
+                              sLCD_DIS.LCD_Dis_Page/2 + (2*j+1)*40/2 - 20 - Font24.Height/2,
+                              *(keyboard_str++),
+                              &Font24,
+                              LCD_WHITE,
+                              LCD_BLACK);
+        }
+    }
+}
+
+static void screen_draw_qr(uint8_t *qrcode)
+{
+    int size = qrcodegen_getSize(qrcode);
+    for(int i = 0; i < size; i++)
+    {
+        for(int j = 0; j < size; j++)
+        {
+            if(qrcodegen_getModule(qrcode, i, j))
+                screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
+                                      j*QR_SIZE + QR_OFFSET,
+                                  (i+1)*QR_SIZE + QR_OFFSET,
+                                  (j+1)*QR_SIZE + QR_OFFSET,
+                                  LCD_BLACK, DRAW_FULL, DOT_PIXEL_DFT);
+            else
+                screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
+                                      j*QR_SIZE + QR_OFFSET,
+                                  (i+1)*QR_SIZE + QR_OFFSET,
+                                  (j+1)*QR_SIZE + QR_OFFSET,
+                                     LCD_WHITE, DRAW_FULL, DOT_PIXEL_DFT);
+        }
+    }
+}
+
+void screen_task(void *arg)
+{
+    enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
+    uint8_t qrcode[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
+    uint8_t temp_buffer[qrcodegen_BUFFER_LEN_FOR_VERSION(2)];
+    screen_interface();
     while(1)
     {
         if(xQueueReceive(screen_task_queue, &screen_task_data, portMAX_DELAY))
@@ -652,60 +721,15 @@ void screen_task(void *arg)
                                      qrcodegen_VERSION_MAX,
                                      qrcodegen_Mask_AUTO,
                                      true);
-                int size = qrcodegen_getSize(qrcode);
-                for(int i = 0; i < size; i++)
-                {
-                    for(int j = 0; j < size; j++)
-                    {
-                        if(qrcodegen_getModule(qrcode, i, j))
-                            screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
-                                                  j*QR_SIZE + QR_OFFSET,
-                                              (i+1)*QR_SIZE + QR_OFFSET,
-                                              (j+1)*QR_SIZE + QR_OFFSET,
-                                              LCD_BLACK, DRAW_FULL, DOT_PIXEL_DFT);
-                        else
-                            screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
-                                                  j*QR_SIZE + QR_OFFSET,
-                                              (i+1)*QR_SIZE + QR_OFFSET,
-                                              (j+1)*QR_SIZE + QR_OFFSET,
-                                                 LCD_WHITE, DRAW_FULL, DOT_PIXEL_DFT);
-                    }
-                }
             }
             else if(screen_task_data.status == 1)
             {
                 if(strcmp(screen_task_data.msg, "GOOD") == 0) screen_check();
                 else if(strcmp(screen_task_data.msg, "BAD") == 0) screen_cross();
                 vTaskDelay(screen_task_data.timer*1000/portTICK_PERIOD_MS);
-
-                screen_clear(LCD_BACKGROUND);
-                screen_big_logo((QR_SIZE*21 + 2*QR_OFFSET + sLCD_DIS.LCD_Dis_Column - dreamit_LOGO_Big_Top.Width)/2,
-                                sLCD_DIS.LCD_Dis_Page/2 - dreamit_LOGO_Big_Top.Height/2);
-                screen_draw_rectangle(               QR_OFFSET/2,
-                                                     QR_OFFSET/2,
-                                      QR_SIZE*21 + 3*QR_OFFSET/2,
-                                      QR_SIZE*21 + 3*QR_OFFSET/2,
-                                      LCD_LOGO_BOT, DRAW_EMPTY, DOT_PIXEL_DFT);
-                int size = qrcodegen_getSize(qrcode);
-                for(int i = 0; i < size; i++)
-                {
-                    for(int j = 0; j < size; j++)
-                    {
-                        if(qrcodegen_getModule(qrcode, i, j))
-                            screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
-                                                  j*QR_SIZE + QR_OFFSET,
-                                              (i+1)*QR_SIZE + QR_OFFSET,
-                                              (j+1)*QR_SIZE + QR_OFFSET,
-                                              LCD_BLACK, DRAW_FULL, DOT_PIXEL_DFT);
-                        else
-                            screen_draw_rectangle(i*QR_SIZE + QR_OFFSET,
-                                                  j*QR_SIZE + QR_OFFSET,
-                                              (i+1)*QR_SIZE + QR_OFFSET,
-                                              (j+1)*QR_SIZE + QR_OFFSET,
-                                                 LCD_WHITE, DRAW_FULL, DOT_PIXEL_DFT);
-                    }
-                }
+                screen_interface();
             }
+            screen_draw_qr(qrcode);
         }
     }
 }
