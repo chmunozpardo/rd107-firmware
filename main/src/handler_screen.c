@@ -435,7 +435,32 @@ void screen_print_char(POINT Xpoint, POINT Ypoint, const char Acsii_Char,
     if(buffer_n != 0) screen_write_buffer(buffer_n);
 }
 
-void screen_print_text(POINT Xstart, POINT Ystart, const char * pString,
+void screen_print_transp_char(POINT Xpoint, POINT Ypoint, const char Acsii_Char,
+                 sFONT *Font, COLOR Color_Foreground)
+{
+    POINT Page, Column;
+
+    if(Xpoint > sLCD_DIS.LCD_Dis_Column || Ypoint > sLCD_DIS.LCD_Dis_Page)
+    {
+        ESP_LOGD(TAG, "screen_print_transp_char Input exceeds the normal display range\r\n");
+        return;
+    }
+
+    uint32_t Char_Offset = (Acsii_Char - ' ') * Font->Height * (Font->Width / 8 + (Font->Width % 8 ? 1 : 0));
+    const unsigned char *ptr = &Font->table[Char_Offset];
+    screen_set_window(Xpoint, Ypoint, Xpoint + Font->Width, Ypoint + Font->Height);
+    for(Page = 0; Page < Font->Height; Page++)
+    {
+        for(Column = 0; Column < Font->Width; Column++)
+        {
+            if(*ptr & (0x80 >> (Column % 8))) screen_set_point_color(Xpoint + Column, Ypoint + Page, Color_Foreground);;
+            if(Column % 8 == 7) ptr++;
+        }
+        if(Font->Width % 8 != 0) ptr++;
+    }
+}
+
+void screen_print_text(POINT Xstart, POINT Ystart, const char *pString,
                       sFONT *Font, COLOR Color_Background, COLOR Color_Foreground)
 {
     POINT Xpoint = Xstart;
@@ -461,6 +486,38 @@ void screen_print_text(POINT Xstart, POINT Ystart, const char * pString,
         if(*pString != '\n')
         {
             screen_print_char(Xpoint, Ypoint, * pString, Font, Color_Background, Color_Foreground);
+            Xpoint += Font->Width;
+        }
+        pString++;
+    }
+}
+
+void screen_print_transp_text(POINT Xstart, POINT Ystart, const char *pString,
+                      sFONT *Font, COLOR Color_Foreground)
+{
+    POINT Xpoint = Xstart;
+    POINT Ypoint = Ystart;
+
+    if(Xstart > sLCD_DIS.LCD_Dis_Column || Ystart > sLCD_DIS.LCD_Dis_Page) {
+        ESP_LOGD(TAG, "screen_print_transp_text Input exceeds the normal display range\r\n");
+        return;
+    }
+
+    while (* pString != '\0')
+    {
+        if((Xpoint + Font->Width) > sLCD_DIS.LCD_Dis_Column || *pString == '\n')
+        {
+            Xpoint = Xstart;
+            Ypoint += Font->Height;
+        }
+        if((Ypoint  + Font->Height) > sLCD_DIS.LCD_Dis_Page)
+        {
+            Xpoint = Xstart;
+            Ypoint = Ystart;
+        }
+        if(*pString != '\n')
+        {
+            screen_print_transp_char(Xpoint, Ypoint, * pString, Font, Color_Foreground);
             Xpoint += Font->Width;
         }
         pString++;
@@ -617,10 +674,25 @@ void screen_print_conf(char *text)
     screen_clear(LCD_BACKGROUND);
     screen_logo(10, 10);
     screen_logo(sLCD_DIS.LCD_Dis_Column - 42, 10);
-    screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - 11*5, 20, "dreamit.cl", &Font16, FONT_BACKGROUND, FONT_FOREGROUND);
+    screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font16.Width*10/2,
+                      20,
+                      "dreamit.cl",
+                      &Font16, FONT_BACKGROUND, FONT_FOREGROUND);
     screen_print_text(10, 80, text, &Font24, FONT_BACKGROUND, FONT_FOREGROUND);
     screen_draw_rectangle(10,  60, sLCD_DIS.LCD_Dis_Column - 10,  66, LCD_LOGO_BOT, DRAW_FULL, DOT_PIXEL_DFT);
     screen_draw_rectangle(10, 214, sLCD_DIS.LCD_Dis_Column - 10, 220, LCD_LOGO_BOT, DRAW_FULL, DOT_PIXEL_DFT);
+    screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font20.Width*27/2,
+                      220 + 15,
+                      "Load default configuration:",
+                      &Font20, FONT_BACKGROUND, FONT_FOREGROUND);
+
+    screen_draw_from_rom(sLCD_DIS.LCD_Dis_Column/2 - button_Sign.Width /2,
+                         220 + 15 + QR_OFFSET + Font20.Height,
+                         &button_Sign, LCD_WHITE);
+    screen_print_transp_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*4/2,
+                             220 + 15 + QR_OFFSET + button_Sign.Height/2 + Font20.Height - Font24.Height/2,
+                             "Load",
+                             &Font24, LCD_WHITE);
 }
 
 static void screen_interface()
@@ -632,27 +704,13 @@ static void screen_interface()
                           QR_SIZE*21 + 3*QR_OFFSET/2,
                           QR_SIZE*21 + 3*QR_OFFSET/2,
                           LCD_LOGO_BOT, DRAW_EMPTY, DOT_PIXEL_DFT);
-    screen_draw_rectangle(5*QR_OFFSET/2 + QR_SIZE*21,
-                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  20,
-                          sLCD_DIS.LCD_Dis_Column - QR_OFFSET,
-                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  50,
-                           LCD_GRAY, DRAW_FULL, DOT_PIXEL_DFT);
-    screen_draw_rectangle(5*QR_OFFSET/2 + QR_SIZE*21,
-                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  20,
-                          sLCD_DIS.LCD_Dis_Column - QR_OFFSET,
-                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  50,
-                           LCD_CYAN, DRAW_EMPTY, DOT_PIXEL_DFT);
+    screen_draw_from_rom((sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 - button_Sign.Width /2,
+                         2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  20,
+                         &button_Sign, LCD_WHITE);
 
-    screen_draw_rectangle(5*QR_OFFSET/2 + QR_SIZE*21,
-                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  80,
-                          sLCD_DIS.LCD_Dis_Column - QR_OFFSET,
-                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 110,
-                           LCD_GRAY, DRAW_FULL, DOT_PIXEL_DFT);
-    screen_draw_rectangle(5*QR_OFFSET/2 + QR_SIZE*21,
-                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  80,
-                          sLCD_DIS.LCD_Dis_Column - QR_OFFSET,
-                          2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 110,
-                           LCD_CYAN, DRAW_EMPTY, DOT_PIXEL_DFT);
+    screen_draw_from_rom((sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 - button_Sign.Width /2,
+                         2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  80,
+                         &button_Sign, LCD_WHITE);
 }
 
 void screen_draw_input_interface(void)

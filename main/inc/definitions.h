@@ -69,7 +69,8 @@
 
 #define LOCAL_TIMEZONE      "<-04>4"
 
-#define HOSTNAME            "http://192.168.1.88:8080/"
+//#define HOSTNAME            "https://192.168.1.88:8080/"
+#define HOSTNAME            "https://alpha-api.gestkontrol.cl/"
 #define URL                 HOSTNAME"control_acceso/obtenerMediosAccesoControladorBinario"
 #define URL_COMMAND         HOSTNAME"control_acceso/obtenerComandosManualesPendientesControlador"
 #define URL_QR              HOSTNAME"control_acceso/obtenerCodigoQR"
@@ -214,6 +215,15 @@ typedef struct screen_queue_t
 } screen_queue_t;
 
 typedef enum {
+    TOUCH_NONE = 0,
+    TOUCH_SET_WIFI,
+    TOUCH_SET_DEVICE,
+    TOUCH_QR_CODE,
+    TOUCH_INPUT_RESERVATION,
+    TOUCH_INPUT_ID,
+} TOUCH_CONTEXT;
+
+typedef enum {
     DOT_PIXEL_1X1 = 1,
     DOT_PIXEL_2X2,
     DOT_PIXEL_3X3,
@@ -345,9 +355,12 @@ extern sFONT dreamit_LOGO_Big_Text;
 extern sFONT cross_Sign;
 extern sFONT check_Sign;
 extern sFONT circle_Sign;
+extern sFONT button_Sign;
 
 extern DEV_TIME sDev_time;
 extern LCD_DIS sLCD_DIS;
+
+extern uint8_t touch_context_status;
 
 extern char apitoken[30];
 extern char database[20];

@@ -1,6 +1,7 @@
 #include "handler_wifi.h"
 #include "handler_web.h"
 #include "handler_screen.h"
+#include "handler_touch.h"
 
 #define GOT_IPV4_BIT BIT(0)
 #define CONNECTED_BITS (GOT_IPV4_BIT)
@@ -17,7 +18,7 @@ uint8_t mac[6]     = {0};
 char wifi_ssid[30] = {0};
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
-                                    int32_t event_id, void* event_data)
+                               int32_t event_id, void* event_data)
 {
     if (event_id == WIFI_EVENT_AP_STACONNECTED)
     {
@@ -187,6 +188,7 @@ void wifi_init(void)
     server = start_webserver(WIFI_WEBSERVER, &server_context);
 
     screen_print_conf("Connect to\nrd107ap2020\nand browse to\n192.168.4.1/config\nto configure Wi-Fi");
+    touch_set_context(&server_context, TOUCH_SET_WIFI);
 
     ESP_LOGI(TAG, "Select network from list [1-%d]. Enter 0 for default:", ap_count);
 
@@ -198,6 +200,7 @@ void wifi_init(void)
 
     stop_webserver(server);
     wifi_end_ap();
+    screen_clear(LCD_BACKGROUND);
 
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &on_wifi_disconnect, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &on_got_ip, NULL));

@@ -6,6 +6,7 @@ static DRAM_ATTR xQueueHandle debounce_queue = NULL;
 
 static TP_DEV sTP_DEV;
 static TP_DRAW sTP_Draw;
+static void *touch_context = NULL;
 
 static DRAM_ATTR uint8_t debounce_touch = 0;
 
@@ -177,38 +178,79 @@ void touch_input_keyboard(void)
     const char *keyboard_str = "123456789<0>";
     if(sTP_DEV.chStatus & TP_PRESS_DOWN)
     {
-        for(int j = 0; j < 4;j++)
+        if(touch_context_status == TOUCH_NONE)
         {
-            for(int i = 0; i < 3;i++)
+            return;
+        }
+        else if(touch_context_status == TOUCH_SET_WIFI)
+        {
+            if(sTP_Draw.Xpoint >= sLCD_DIS.LCD_Dis_Column/2 - button_Sign.Width /2 &&
+               sTP_Draw.Xpoint <= sLCD_DIS.LCD_Dis_Column/2 + button_Sign.Width /2 &&
+               sTP_Draw.Ypoint >= 220 + 15 + QR_OFFSET + Font20.Height &&
+               sTP_Draw.Ypoint <= 220 + 15 + QR_OFFSET + Font20.Height + button_Sign.Height)
             {
-                if(sTP_Draw.Xpoint >= QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
-                   sTP_Draw.Xpoint <= QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
-                   sTP_Draw.Ypoint >= sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20 &&
-                   sTP_Draw.Ypoint <= sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20)
+                *(((wifi_context_t*)touch_context)->opt)      = 0;
+                *(((wifi_context_t*)touch_context)->http_ind) = 1;
+                touch_context_status = TOUCH_NONE;
+            }
+        }
+        else if(touch_context_status == TOUCH_SET_DEVICE)
+        {
+            if(sTP_Draw.Xpoint >= sLCD_DIS.LCD_Dis_Column/2 - button_Sign.Width /2 &&
+               sTP_Draw.Xpoint <= sLCD_DIS.LCD_Dis_Column/2 + button_Sign.Width /2 &&
+               sTP_Draw.Ypoint >= 220 + 15 + QR_OFFSET + Font20.Height &&
+               sTP_Draw.Ypoint <= 220 + 15 + QR_OFFSET + Font20.Height + button_Sign.Height)
+            {
+                *(((reg_context_t*)touch_context)->opt_web)  = 'y';
+                *(((reg_context_t*)touch_context)->http_ind) =  1 ;
+                touch_context_status = TOUCH_NONE;
+            }
+        }
+        else if(touch_context_status == TOUCH_INPUT_RESERVATION)
+        {
+            for(int j = 0; j < 4;j++)
+            {
+                for(int i = 0; i < 3;i++)
                 {
-                    if(*(keyboard_str + i + 3*j) != '<' && keyboard_pos < 15)
+                    if(sTP_Draw.Xpoint >= QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
+                       sTP_Draw.Xpoint <= QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
+                       sTP_Draw.Ypoint >= sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20 &&
+                       sTP_Draw.Ypoint <= sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20)
                     {
-                        keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 3*j);
+                        if(*(keyboard_str + i + 3*j) == '>')
+                        {
+                            printf("Hola\n");
+                        }
+                        if(*(keyboard_str + i + 3*j) != '<' && keyboard_pos < 15)
+                        {
+                            keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 3*j);
+                        }
+                        if(*(keyboard_str + i + 3*j) == '<' && keyboard_pos > 0)
+                        {
+                            screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                                  QR_OFFSET*3,
+                                                  sLCD_DIS.LCD_Dis_Column/2 + Font24.Width*keyboard_pos/2,
+                                                  QR_OFFSET*3 + Font24.Height,
+                                                  LCD_WHITE, DRAW_FULL, DOT_PIXEL_1X1);
+                            keyboard_input_str[--keyboard_pos] = '\0';
+                        }
+                        screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                          QR_OFFSET*3,
+                                          keyboard_input_str,
+                                          &Font24,
+                                          LCD_WHITE,
+                                          LCD_BLACK);
                     }
-                    if(*(keyboard_str + i + 3*j) == '<' && keyboard_pos > 0)
-                    {
-                        screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
-                                              QR_OFFSET*3,
-                                              sLCD_DIS.LCD_Dis_Column/2 + Font24.Width*keyboard_pos/2,
-                                              QR_OFFSET*3 + Font24.Height,
-                                              LCD_WHITE, DRAW_FULL, DOT_PIXEL_1X1);
-                        keyboard_input_str[--keyboard_pos] = '\0';
-                    }
-                    screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
-                                      QR_OFFSET*3,
-                                      keyboard_input_str,
-                                      &Font24,
-                                      LCD_WHITE,
-                                      LCD_BLACK);
                 }
             }
         }
     }
+}
+
+void IRAM_ATTR touch_set_context(void *context, uint8_t context_status)
+{
+    touch_context        = context;
+    touch_context_status = context_status;
 }
 
 void IRAM_ATTR debounce_task(void *arg)

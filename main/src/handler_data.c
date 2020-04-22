@@ -1,6 +1,7 @@
 #include "handler_web.h"
 #include "handler_data.h"
 #include "handler_parse.h"
+#include "handler_touch.h"
 #include "handler_search.h"
 #include "handler_screen.h"
 
@@ -44,7 +45,7 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
         case HTTP_EVENT_ON_DATA:
             ESP_LOGD(TAG_HTTPS, "DATA, len=%d", evt->data_len);
             FILE *f;
-            //printf("%.*s\n", evt->data_len, (char*)evt->data);
+            printf("%.*s\n", evt->data_len, (char*)evt->data);
             f = fopen(FILE_JSON, "a+");
             if(f == NULL)
             {
@@ -229,12 +230,14 @@ void data_register()
     strcat(screen_str, "/config\nto configure this device");
 
     screen_print_conf(screen_str);
+    touch_set_context(&server_context, TOUCH_SET_DEVICE);
 
     if(stat(FILE_CONFIG, &st) == 0)
     {
         ESP_LOGI(TAG, "There is a previous device configuration. Do you want to load it? (y/n):");
         while(opt == -1 && http_ind != 1) opt = enter_opt(in_opt);
         if(http_ind == 1) in_opt[0] = opt_web;
+        screen_clear(LCD_BACKGROUND);
         if(in_opt[0] == 'y')
         {
             stop_webserver(server_code);

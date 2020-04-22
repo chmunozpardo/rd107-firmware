@@ -14,10 +14,11 @@
 
 //static const char* TAG = "app_main";
 
-uint32_t reservation_size = 0;
-uint32_t card_size        = 0;
-uint64_t timestamp        = 0;
-uint64_t timestamp_temp   = 0;
+uint8_t touch_context_status = 0;
+uint32_t reservation_size    = 0;
+uint32_t card_size           = 0;
+uint64_t timestamp           = 0;
+uint64_t timestamp_temp      = 0;
 
 char screen_qr[7] = "000000\0";
 
@@ -36,8 +37,8 @@ TaskHandle_t wiegand_task_handle = NULL;
 SemaphoreHandle_t reg_semaphore         = NULL;
 SemaphoreHandle_t reservation_semaphore = NULL;
 
-DRAM_ATTR CARD card_importer[COPY_SIZE]              = {0};
-DRAM_ATTR CARD card_data[CARD_READER_SIZE]           = {0};
+DRAM_ATTR CARD card_importer[COPY_SIZE]    = {0};
+DRAM_ATTR CARD card_data[CARD_READER_SIZE] = {0};
 
 DRAM_ATTR RESERVATION reservation_importer[COPY_SIZE]           = {0};
 DRAM_ATTR RESERVATION reservation_data[RESERVATION_READER_SIZE] = {0};
@@ -64,12 +65,12 @@ static void setup()
     remove(FILE_CARDS);
     remove(FILE_JSON);
     remove(FILE_RESERVATIONS);
-    remove(FILE_CONFIG);
+    //remove(FILE_CONFIG);
     remove(FILE_TIMESTAMP);
 
-    FILE *f  = fopen(FILE_CONFIG, "w");
-    fprintf(f, "%s,%s,%s", "dreamit-testing-rd107-2020", "1", "GK2_Industrias");
-    fclose(f);
+    //FILE *f  = fopen(FILE_CONFIG, "w");
+    //fprintf(f, "%s,%s,%s", "dreamit-testing-rd107-2020", "1", "GK2_Industrias");
+    //fclose(f);
 
     // Initiate all peripherals
     spi_init();
@@ -80,15 +81,9 @@ static void setup()
     wiegand_init();
 
     xTaskCreatePinnedToCore(debounce_task, "dbn_task", 4096, NULL, 1, NULL               , 0);
-    xTaskCreatePinnedToCore(screen_task  , "scr_task", 4096, NULL, 1, &screen_task_handle, 0);
-    screen_draw_input_interface();
-    while(1){;}
-
-    //TP_Dialog();
-    //screen_cross();
-    //vTaskDelay(5000/portTICK_PERIOD_MS);
-    //screen_check();
-    //for(;;){;}
+    //xTaskCreatePinnedToCore(screen_task  , "scr_task", 4096, NULL, 1, &screen_task_handle, 0);
+    //screen_draw_input_interface();
+    //while(1){;}
 
     // Initiate WiFi configurations
     wifi_init();

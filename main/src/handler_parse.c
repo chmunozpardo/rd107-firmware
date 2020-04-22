@@ -36,6 +36,7 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
     {
         xSemaphoreTake(reg_semaphore, portMAX_DELAY);
         f = fopen(FILE_CARDS, "r+");
+        if(f == NULL) f = fopen(FILE_CARDS, "w+");
         check = 0;
         while(check == 0)
         {
@@ -74,6 +75,7 @@ static IRAM_ATTR void parse_insert_reservation(RESERVATION *input, uint32_t read
     {
         xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
         f = fopen(FILE_RESERVATIONS, "r+");
+        if(f == NULL) f = fopen(FILE_RESERVATIONS, "w+");
         check = 0;
         while(check == 0)
         {
