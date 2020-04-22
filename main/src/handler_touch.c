@@ -9,6 +9,10 @@ static TP_DRAW sTP_Draw;
 
 static DRAM_ATTR uint8_t debounce_touch = 0;
 
+static char keyboard_input_str[15] = "";
+
+static uint8_t keyboard_pos = 0;
+
 static IRAM_ATTR void debounce_isr(void* arg)
 {
     BaseType_t xTaskWokenByReceive = pdFALSE;
@@ -65,15 +69,11 @@ static bool touch_read_xy(uint16_t *x_ch_mean, uint16_t *y_ch_mean)
     return false;
 }
 
-static unsigned char touch_input(unsigned char chCoordType)
+static unsigned char touch_input()
 {
     if(!gpio_get_level(LCD_PIN_IRQ))
     {
-        if(chCoordType)
-        {
-            touch_read_xy(&sTP_DEV.Xpoint, &sTP_DEV.Ypoint);
-        }
-        else if(touch_read_xy(&sTP_DEV.Xpoint, &sTP_DEV.Ypoint))
+        if(touch_read_xy(&sTP_DEV.Xpoint, &sTP_DEV.Ypoint))
         {
             if(sTP_DEV.TP_Scan_Dir == R2L_D2U)
             {
@@ -172,116 +172,39 @@ void touch_init_f(void)
     gpio_isr_handler_add(LCD_PIN_IRQ, debounce_isr, (void*) NULL);
 }
 
-void TP_Dialog(void)
-{
-    screen_clear(LCD_BACKGROUND);
-    if(sLCD_DIS.LCD_Dis_Column > sLCD_DIS.LCD_Dis_Page)
-    {
-        screen_print_text(sLCD_DIS.LCD_Dis_Column - 60, 0,
-                         "CLEAR", &Font16, LCD_RED, LCD_BLUE);
-        screen_print_text(sLCD_DIS.LCD_Dis_Column - 120, 0,
-                         "AD", &Font24, LCD_RED, LCD_BLUE);
-        screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column - 50, 20,
-                              sLCD_DIS.LCD_Dis_Column, 70,
-                              LCD_BLUE, DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column - 50, 80,
-                              sLCD_DIS.LCD_Dis_Column, 130,
-                              LCD_GREEN, DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column - 50, 140,
-                              sLCD_DIS.LCD_Dis_Column, 190,
-                              LCD_RED, DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column - 50, 200,
-                              sLCD_DIS.LCD_Dis_Column, 250,
-                              LCD_YELLOW, DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column - 50, 260,
-                              sLCD_DIS.LCD_Dis_Column, 310,
-                              LCD_BLACK, DRAW_FULL, DOT_PIXEL_1X1);
-    }
-    else
-    {
-        screen_print_text(sLCD_DIS.LCD_Dis_Column - 60, 0,
-                         "CLEAR", &Font16, LCD_RED, LCD_BLUE);
-        screen_print_text(sLCD_DIS.LCD_Dis_Column - 120, 0,
-                         "AD", &Font24, LCD_RED, LCD_BLUE);
-        screen_draw_rectangle( 20, 20,  70, 70, LCD_BLUE  , DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle( 80, 20, 130, 70, LCD_GREEN , DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle(140, 20, 190, 70, LCD_RED   , DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle(200, 20, 250, 70, LCD_YELLOW, DRAW_FULL, DOT_PIXEL_1X1);
-        screen_draw_rectangle(260, 20, 310, 70, LCD_BLACK , DRAW_FULL, DOT_PIXEL_1X1);
-    }
-}
-
-void TP_DrawBoard(void)
+void touch_input_keyboard(void)
 {
     const char *keyboard_str = "123456789<0>";
     if(sTP_DEV.chStatus & TP_PRESS_DOWN)
     {
-        if(sTP_Draw.Xpoint < sLCD_DIS.LCD_Dis_Column &&
-           sTP_Draw.Ypoint < sLCD_DIS.LCD_Dis_Page)
+        for(int j = 0; j < 4;j++)
         {
-            if(sLCD_DIS.LCD_Dis_Column > sLCD_DIS.LCD_Dis_Page)
+            for(int i = 0; i < 3;i++)
             {
-                for(int j = 0; j < 4;j++)
+                if(sTP_Draw.Xpoint >= QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
+                   sTP_Draw.Xpoint <= QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
+                   sTP_Draw.Ypoint >= sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20 &&
+                   sTP_Draw.Ypoint <= sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20)
                 {
-                    for(int i = 0; i < 3;i++)
+                    if(*(keyboard_str + i + 3*j) != '<' && keyboard_pos < 15)
                     {
-                        if(sTP_Draw.Xpoint >= QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
-                           sTP_Draw.Xpoint <= QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
-                           sTP_Draw.Ypoint >= sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20 &&
-                           sTP_Draw.Ypoint <= sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20)
-                        {
-                            screen_print_char(QR_OFFSET + (sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/2 - Font24.Width/2,
-                                              QR_OFFSET*3,
-                                              *(keyboard_str + i + 3*j),
-                                              &Font24,
-                                              LCD_WHITE,
-                                              LCD_BLACK);
-                        }
+                        keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 3*j);
                     }
-                }
-            }
-            else
-            {
-                if(sTP_Draw.Xpoint > (sLCD_DIS.LCD_Dis_Column - 60) &&
-                   sTP_Draw.Ypoint < 16)
-                {
-                    TP_Dialog();
-                }
-                else if(sTP_Draw.Xpoint > (sLCD_DIS.LCD_Dis_Column - 120) &&
-                        sTP_Draw.Xpoint < (sLCD_DIS.LCD_Dis_Column -  80) &&
-                        sTP_Draw.Ypoint < 24) {
-                    TP_Dialog();
-                }
-                else if(sTP_Draw.Xpoint > 20 && sTP_Draw.Xpoint < 70 &&
-                        sTP_Draw.Ypoint > 20 && sTP_Draw.Ypoint < 70)
-                {
-                    sTP_Draw.Color = LCD_BLUE;
-                }
-                else if(sTP_Draw.Xpoint > 80 && sTP_Draw.Xpoint < 130 &&
-                        sTP_Draw.Ypoint > 20 && sTP_Draw.Ypoint <  70)
-                {
-                    sTP_Draw.Color = LCD_GREEN;
-                }
-                else if(sTP_Draw.Xpoint > 140 && sTP_Draw.Xpoint < 190 &&
-                        sTP_Draw.Ypoint >  20 && sTP_Draw.Ypoint <  70)
-                {
-                    sTP_Draw.Color = LCD_RED;
-                }
-                else if(sTP_Draw.Xpoint > 200 && sTP_Draw.Xpoint < 250 &&
-                        sTP_Draw.Ypoint >  20 && sTP_Draw.Ypoint <  70)
-                {
-                    sTP_Draw.Color = LCD_YELLOW;
-                }
-                else if(sTP_Draw.Xpoint > 260 && sTP_Draw.Xpoint < 310 &&
-                        sTP_Draw.Ypoint >  20 && sTP_Draw.Ypoint <  70)
-                {
-                    sTP_Draw.Color = LCD_BLACK;
-                }
-                else
-                {
-                    screen_draw_point(sTP_Draw.Xpoint, sTP_Draw.Ypoint,
-                                      sTP_Draw.Color , DOT_PIXEL_2X2,
-                                      DOT_FILL_RIGHTUP);
+                    if(*(keyboard_str + i + 3*j) == '<' && keyboard_pos > 0)
+                    {
+                        screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                              QR_OFFSET*3,
+                                              sLCD_DIS.LCD_Dis_Column/2 + Font24.Width*keyboard_pos/2,
+                                              QR_OFFSET*3 + Font24.Height,
+                                              LCD_WHITE, DRAW_FULL, DOT_PIXEL_1X1);
+                        keyboard_input_str[--keyboard_pos] = '\0';
+                    }
+                    screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                      QR_OFFSET*3,
+                                      keyboard_input_str,
+                                      &Font24,
+                                      LCD_WHITE,
+                                      LCD_BLACK);
                 }
             }
         }
@@ -301,8 +224,8 @@ void IRAM_ATTR debounce_task(void *arg)
         {
             gpio_isr_handler_remove(LCD_PIN_IRQ);
             state = 0;
-            touch_input(0);
-            TP_DrawBoard();
+            touch_input();
+            touch_input_keyboard();
             gpio_isr_handler_add(LCD_PIN_IRQ, debounce_isr, (void*) NULL);
         }
     }

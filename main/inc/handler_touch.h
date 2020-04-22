@@ -6,9 +6,8 @@ extern "C" {
 
 #include "definitions.h"
 
-void TP_Dialog(void);
-void TP_DrawBoard(void);
-void touch_init_f (void);
+void touch_init_f(void);
+void touch_input_keyboard(void);
 void debounce_task(void *arg);
 
 #ifdef __cplusplus

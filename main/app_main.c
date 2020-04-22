@@ -79,7 +79,8 @@ static void setup()
     screen_init();
     wiegand_init();
 
-    xTaskCreatePinnedToCore(debounce_task , "dbn_task", 4096, NULL, 1, NULL, 0);
+    xTaskCreatePinnedToCore(debounce_task, "dbn_task", 4096, NULL, 1, NULL               , 0);
+    xTaskCreatePinnedToCore(screen_task  , "scr_task", 4096, NULL, 1, &screen_task_handle, 0);
     screen_draw_input_interface();
     while(1){;}
 

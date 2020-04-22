@@ -19,7 +19,7 @@ void screen_draw_circle(POINT X_Center, POINT Y_Center, LENGTH Radius, COLOR Col
 void screen_draw_rectangle(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, COLOR Color, DRAW_FILL Filled, DOT_PIXEL Dot_Pixel);
 
 void screen_print_char(POINT Xstart, POINT Ystart, const char Acsii_Char, sFONT *Font, COLOR Color_Background, COLOR Color_Foreground);
-void screen_print_text(POINT Xstart, POINT Ystart, const char * pString, sFONT *Font, COLOR Color_Background, COLOR Color_Foreground);
+void screen_print_text(POINT Xstart, POINT Ystart, const char *pString, sFONT *Font, COLOR Color_Background, COLOR Color_Foreground);
 void screen_print_conf(char *text);
 
 void screen_set_color(COLOR Color ,POINT Xpoint, POINT Ypoint);
