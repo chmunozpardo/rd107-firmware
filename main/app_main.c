@@ -27,12 +27,13 @@ xQueueHandle relay_task_queue  = NULL;
 xQueueHandle buzzer_task_queue = NULL;
 xQueueHandle screen_task_queue = NULL;
 
-TaskHandle_t rgb_task_handle     = NULL;
-TaskHandle_t data_task_handle    = NULL;
-TaskHandle_t relay_task_handle   = NULL;
-TaskHandle_t buzzer_task_handle  = NULL;
-TaskHandle_t screen_task_handle  = NULL;
-TaskHandle_t wiegand_task_handle = NULL;
+TaskHandle_t rgb_task_handle      = NULL;
+TaskHandle_t data_task_handle     = NULL;
+TaskHandle_t relay_task_handle    = NULL;
+TaskHandle_t buzzer_task_handle   = NULL;
+TaskHandle_t screen_task_handle   = NULL;
+TaskHandle_t wiegand_task_handle  = NULL;
+TaskHandle_t debounce_task_handle = NULL;
 
 SemaphoreHandle_t reg_semaphore         = NULL;
 SemaphoreHandle_t reservation_semaphore = NULL;
@@ -81,8 +82,7 @@ static void setup()
     wiegand_init();
 
     xTaskCreatePinnedToCore(debounce_task, "dbn_task", 4096, NULL, 1, NULL               , 0);
-    //xTaskCreatePinnedToCore(screen_task  , "scr_task", 4096, NULL, 1, &screen_task_handle, 0);
-    //screen_draw_input_interface();
+    //screen_draw_input_reservation();
     //while(1){;}
 
     // Initiate WiFi configurations

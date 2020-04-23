@@ -9,6 +9,7 @@ static FILE *f                      = NULL;
 
 void IRAM_ATTR search_card(uint8_t size, uint64_t value)
 {
+    status = 0;
     RGB_SIGNAL(RGB_ORANGE, RGB_LEDS, 0);
     if(size == 26)
     {
@@ -36,8 +37,7 @@ void IRAM_ATTR search_card(uint8_t size, uint64_t value)
     if(f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
-        xSemaphoreGive(reg_semaphore);
-        return;
+        f = fopen(FILE_CARDS, "w+");
     }
 
     while((read_size = fread(card_data, CARD_SIZE, CARD_READER_SIZE, f)) > 0)
@@ -55,6 +55,7 @@ void IRAM_ATTR search_card(uint8_t size, uint64_t value)
     if(status)
     {
         ESP_LOGD(TAG, " --> Card found <--");
+        RELAY_SIGNAL(DISPLAY_TIME);
         SCREEN_SIGNAL("GOOD", 1, DISPLAY_TIME);
         RGB_SIGNAL(RGB_GREEN, RGB_LEDS, DISPLAY_TIME);
     }
@@ -69,6 +70,7 @@ void IRAM_ATTR search_card(uint8_t size, uint64_t value)
 
 void IRAM_ATTR search_reservation_qr(char *qr)
 {
+    status = 1;
     RGB_SIGNAL(RGB_ORANGE, RGB_LEDS, 0);
     xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
     f = fopen(FILE_RESERVATIONS, "r");
@@ -77,8 +79,7 @@ void IRAM_ATTR search_reservation_qr(char *qr)
     if(f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
-        xSemaphoreGive(reservation_semaphore);
-        return;
+        f = fopen(FILE_RESERVATIONS, "w+");
     }
 
     while((read_size = fread(reservation_data, RESERVATION_SIZE, RESERVATION_READER_SIZE, f)) > 0)
@@ -96,6 +97,7 @@ void IRAM_ATTR search_reservation_qr(char *qr)
     if(status == 0)
     {
         ESP_LOGD(TAG, " --> Reservation found <--");
+        RELAY_SIGNAL(DISPLAY_TIME);
         SCREEN_SIGNAL("GOOD", 1, DISPLAY_TIME);
         RGB_SIGNAL(RGB_GREEN, RGB_LEDS, DISPLAY_TIME);
     }
@@ -110,6 +112,7 @@ void IRAM_ATTR search_reservation_qr(char *qr)
 
 void IRAM_ATTR search_reservation_code(char *code)
 {
+    status = 1;
     RGB_SIGNAL(RGB_ORANGE, RGB_LEDS, 0);
     xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
     f = fopen(FILE_RESERVATIONS, "r");
@@ -118,8 +121,7 @@ void IRAM_ATTR search_reservation_code(char *code)
     if(f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
-        xSemaphoreGive(reservation_semaphore);
-        return;
+        f = fopen(FILE_RESERVATIONS, "w+");
     }
 
     while((read_size = fread(reservation_data, RESERVATION_SIZE, RESERVATION_READER_SIZE, f)) > 0)
@@ -137,6 +139,7 @@ void IRAM_ATTR search_reservation_code(char *code)
     if(status == 0)
     {
         ESP_LOGD(TAG, " --> Reservation found <--");
+        RELAY_SIGNAL(DISPLAY_TIME);
         SCREEN_SIGNAL("GOOD", 1, DISPLAY_TIME);
         RGB_SIGNAL(RGB_GREEN, RGB_LEDS, DISPLAY_TIME);
     }

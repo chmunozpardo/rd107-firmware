@@ -220,7 +220,7 @@ typedef enum {
     TOUCH_SET_DEVICE,
     TOUCH_QR_CODE,
     TOUCH_INPUT_RESERVATION,
-    TOUCH_INPUT_ID,
+    TOUCH_INPUT_RUT,
 } TOUCH_CONTEXT;
 
 typedef enum {
@@ -402,6 +402,7 @@ extern TaskHandle_t relay_task_handle;
 extern TaskHandle_t buzzer_task_handle;
 extern TaskHandle_t screen_task_handle;
 extern TaskHandle_t wiegand_task_handle;
+extern TaskHandle_t debounce_task_handle;
 
 extern screen_queue_t screen_task_data;
 

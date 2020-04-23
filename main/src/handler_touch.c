@@ -1,5 +1,6 @@
 #include "handler_spi.h"
 #include "handler_touch.h"
+#include "handler_search.h"
 #include "handler_screen.h"
 
 static DRAM_ATTR xQueueHandle debounce_queue = NULL;
@@ -206,26 +207,49 @@ void touch_input_keyboard(void)
                 touch_context_status = TOUCH_NONE;
             }
         }
+        else if(touch_context_status == TOUCH_QR_CODE)
+        {
+            if(sTP_Draw.Xpoint >= (sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 - button_Sign.Width/2 &&
+               sTP_Draw.Xpoint <= (sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 + button_Sign.Width/2 &&
+               sTP_Draw.Ypoint >= 2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 20 &&
+               sTP_Draw.Ypoint <= 2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 20 + button_Sign.Height)
+            {
+                printf("Reserva\n");
+                touch_context_status = TOUCH_INPUT_RESERVATION;
+                SCREEN_SIGNAL("", 2, 0);
+            }
+            else if(sTP_Draw.Xpoint >= (sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 - button_Sign.Width/2 &&
+                    sTP_Draw.Xpoint <= (sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 + button_Sign.Width/2 &&
+                    sTP_Draw.Ypoint >= 2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 80 &&
+                    sTP_Draw.Ypoint <= 2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 80 + button_Sign.Height)
+            {
+                printf("Cedula\n");
+                touch_context_status = TOUCH_INPUT_RUT;
+                SCREEN_SIGNAL("", 2, 0);
+            }
+        }
         else if(touch_context_status == TOUCH_INPUT_RESERVATION)
         {
+            const char *keyboard_str = "1234567890QWERTYUIOPASDFGHJKL< ZXCVBNM >";
             for(int j = 0; j < 4;j++)
             {
-                for(int i = 0; i < 3;i++)
+                for(int i = 0; i < 10;i++)
                 {
-                    if(sTP_Draw.Xpoint >= QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
-                       sTP_Draw.Xpoint <= QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/3 &&
+                    if(sTP_Draw.Xpoint >= QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/(10) &&
+                       sTP_Draw.Xpoint <= QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/(10) &&
                        sTP_Draw.Ypoint >= sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20 &&
                        sTP_Draw.Ypoint <= sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20)
                     {
-                        if(*(keyboard_str + i + 3*j) == '>')
+                        if(*(keyboard_str + i + 10*j) == '>')
                         {
                             printf("Hola\n");
+                            touch_context_status = TOUCH_QR_CODE;
+                            search_reservation_code(keyboard_input_str);
+                            memset(keyboard_input_str, 0, 15);
+                            keyboard_pos = 0;
                         }
-                        if(*(keyboard_str + i + 3*j) != '<' && keyboard_pos < 15)
-                        {
-                            keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 3*j);
-                        }
-                        if(*(keyboard_str + i + 3*j) == '<' && keyboard_pos > 0)
+                        if(*(keyboard_str + i + 10*j) == '<' &&
+                           keyboard_pos > 0)
                         {
                             screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
                                                   QR_OFFSET*3,
@@ -233,13 +257,78 @@ void touch_input_keyboard(void)
                                                   QR_OFFSET*3 + Font24.Height,
                                                   LCD_WHITE, DRAW_FULL, DOT_PIXEL_1X1);
                             keyboard_input_str[--keyboard_pos] = '\0';
-                        }
-                        screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                            screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
                                           QR_OFFSET*3,
                                           keyboard_input_str,
                                           &Font24,
                                           LCD_WHITE,
                                           LCD_BLACK);
+                        }
+                        if(*(keyboard_str + i + 10*j) != '<' &&
+                           *(keyboard_str + i + 10*j) != '>' &&
+                           *(keyboard_str + i + 10*j) != ' ' &&
+                           keyboard_pos < 15)
+                        {
+                            keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 10*j);
+                            screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                          QR_OFFSET*3,
+                                          keyboard_input_str,
+                                          &Font24,
+                                          LCD_WHITE,
+                                          LCD_BLACK);
+                        }
+                    }
+                }
+            }
+        }
+        else if(touch_context_status == TOUCH_INPUT_RUT)
+        {
+            const char *keyboard_str = "123456789<0>";
+            for(int j = 0; j < 4;j++)
+            {
+                for(int i = 0; i < 3;i++)
+                {
+                    if(sTP_Draw.Xpoint >= QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/(3) &&
+                       sTP_Draw.Xpoint <= QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/(3) &&
+                       sTP_Draw.Ypoint >= sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20 &&
+                       sTP_Draw.Ypoint <= sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20)
+                    {
+                        if(*(keyboard_str + i + 3*j) == '>')
+                        {
+                            printf("Hola\n");
+                            touch_context_status = TOUCH_QR_CODE;
+                            search_reservation_code(keyboard_input_str);
+                            memset(keyboard_input_str, 0, 15);
+                            keyboard_pos = 0;
+                        }
+                        if(*(keyboard_str + i + 3*j) == '<' &&
+                           keyboard_pos > 0)
+                        {
+                            screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                                  QR_OFFSET*3,
+                                                  sLCD_DIS.LCD_Dis_Column/2 + Font24.Width*keyboard_pos/2,
+                                                  QR_OFFSET*3 + Font24.Height,
+                                                  LCD_WHITE, DRAW_FULL, DOT_PIXEL_1X1);
+                            keyboard_input_str[--keyboard_pos] = '\0';
+                            screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                          QR_OFFSET*3,
+                                          keyboard_input_str,
+                                          &Font24,
+                                          LCD_WHITE,
+                                          LCD_BLACK);
+                        }
+                        if(*(keyboard_str + i + 3*j) != '<' &&
+                           *(keyboard_str + i + 3*j) != '>' &&
+                           keyboard_pos < 15)
+                        {
+                            keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 3*j);
+                            screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                          QR_OFFSET*3,
+                                          keyboard_input_str,
+                                          &Font24,
+                                          LCD_WHITE,
+                                          LCD_BLACK);
+                        }
                     }
                 }
             }

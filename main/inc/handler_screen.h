@@ -12,6 +12,7 @@ void screen_task(void *arg);
 void screen_gram_scan(LCD_SCAN_DIR Scan_dir);
 
 void screen_draw_input_interface(void);
+void screen_draw_input_reservation(void);
 
 void screen_draw_point(POINT Xpoint, POINT Ypoint, COLOR Color, DOT_PIXEL Dot_Pixel, DOT_STYLE Dot_FillWay);
 void screen_draw_line(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, COLOR Color, LINE_STYLE Line_Style, DOT_PIXEL Dot_Pixel);

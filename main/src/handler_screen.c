@@ -1,4 +1,5 @@
 #include "handler_spi.h"
+#include "handler_touch.h"
 #include "handler_screen.h"
 #include "qrcodegen.h"
 
@@ -691,8 +692,7 @@ void screen_print_conf(char *text)
                          &button_Sign, LCD_WHITE);
     screen_print_transp_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*4/2,
                              220 + 15 + QR_OFFSET + button_Sign.Height/2 + Font20.Height - Font24.Height/2,
-                             "Load",
-                             &Font24, LCD_WHITE);
+                             "Load", &Font24, LCD_WHITE);
 }
 
 static void screen_interface()
@@ -704,13 +704,48 @@ static void screen_interface()
                           QR_SIZE*21 + 3*QR_OFFSET/2,
                           QR_SIZE*21 + 3*QR_OFFSET/2,
                           LCD_LOGO_BOT, DRAW_EMPTY, DOT_PIXEL_DFT);
-    screen_draw_from_rom((sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 - button_Sign.Width /2,
-                         2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  20,
+
+    screen_draw_from_rom((sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 - button_Sign.Width/2,
+                         2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 20,
                          &button_Sign, LCD_WHITE);
 
-    screen_draw_from_rom((sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 - button_Sign.Width /2,
-                         2*QR_OFFSET + dreamit_LOGO_Big_Top.Height +  80,
+    screen_print_transp_text((sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 - Font20.Width*7/2,
+                             2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 20 + button_Sign.Height/2 - Font20.Height/2,
+                             "Reserva", &Font20, LCD_WHITE);
+
+    screen_draw_from_rom((sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 - button_Sign.Width/2,
+                         2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 80,
                          &button_Sign, LCD_WHITE);
+
+    screen_print_transp_text((sLCD_DIS.LCD_Dis_Column + QR_SIZE*21 + 2*QR_OFFSET)/2 - Font20.Width*6/2,
+                             2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 80 + button_Sign.Height/2 - Font20.Height/2,
+                             "Cedula", &Font20, LCD_WHITE);
+
+    touch_set_context("", TOUCH_QR_CODE);
+}
+
+void screen_draw_input_reservation(void)
+{
+    screen_clear(LCD_BACKGROUND);
+    const char *keyboard_str = "1234567890QWERTYUIOPASDFGHJKL< ZXCVBNM >";
+    for(int j = 0; j < 4;j++)
+    {
+        for(int i = 0; i < 10;i++)
+        {
+            screen_draw_rectangle(QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/10,
+                                  sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20,
+                                  QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/10,
+                                  sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20,
+                                  LCD_GRAY, DRAW_EMPTY, DOT_PIXEL_DFT);
+            screen_print_char(QR_OFFSET + (2*i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/(2*10) - Font24.Width/2,
+                              sLCD_DIS.LCD_Dis_Page/2 + (2*j+1)*40/2 - 20 - Font24.Height/2,
+                              *(keyboard_str++),
+                              &Font24,
+                              LCD_WHITE,
+                              LCD_BLACK);
+        }
+    }
+    touch_set_context("", TOUCH_INPUT_RESERVATION);
 }
 
 void screen_draw_input_interface(void)
@@ -734,6 +769,7 @@ void screen_draw_input_interface(void)
                               LCD_BLACK);
         }
     }
+    touch_set_context("", TOUCH_INPUT_RUT);
 }
 
 static void screen_draw_qr(uint8_t *qrcode)
@@ -771,23 +807,49 @@ void screen_task(void *arg)
         {
             if(screen_task_data.status == 0)
             {
-                qrcodegen_encodeText(screen_task_data.msg,
-                                     temp_buffer,
-                                     qrcode,
-                                     errCorLvl,
-                                     qrcodegen_VERSION_MIN,
-                                     qrcodegen_VERSION_MAX,
-                                     qrcodegen_Mask_AUTO,
-                                     true);
+                if(touch_context_status == TOUCH_QR_CODE)
+                {
+                    qrcodegen_encodeText(screen_task_data.msg,
+                                         temp_buffer,
+                                         qrcode,
+                                         errCorLvl,
+                                         qrcodegen_VERSION_MIN,
+                                         qrcodegen_VERSION_MAX,
+                                         qrcodegen_Mask_AUTO,
+                                         true);
+                    screen_draw_qr(qrcode);
+                }
             }
             else if(screen_task_data.status == 1)
             {
                 if(strcmp(screen_task_data.msg, "GOOD") == 0) screen_check();
                 else if(strcmp(screen_task_data.msg, "BAD") == 0) screen_cross();
                 vTaskDelay(screen_task_data.timer*1000/portTICK_PERIOD_MS);
-                screen_interface();
+                if(touch_context_status == TOUCH_QR_CODE)
+                {
+                    screen_interface();
+                    screen_draw_qr(qrcode);
+                }
+                if(touch_context_status == TOUCH_INPUT_RESERVATION)
+                {
+                    screen_draw_input_reservation();
+                }
+                if(touch_context_status == TOUCH_INPUT_RUT)
+                {
+                    screen_draw_input_interface();
+                }
             }
-            screen_draw_qr(qrcode);
+            else if(screen_task_data.status == 2)
+            {
+                if(touch_context_status == TOUCH_INPUT_RESERVATION)
+                {
+                    screen_draw_input_reservation();
+                }
+                if(touch_context_status == TOUCH_INPUT_RUT)
+                {
+                    screen_draw_input_interface();
+                }
+            }
         }
     }
 }

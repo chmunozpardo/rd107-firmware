@@ -303,11 +303,12 @@ void IRAM_ATTR data_task(void *arg)
         data_client_set(&parse_command, URL_COMMAND);
         data_client_set(&parse_qr, URL_QR);
 
-        vTaskPrioritySet(wiegand_task_handle, 1);
-        vTaskPrioritySet(rgb_task_handle    , 2);
-        vTaskPrioritySet(relay_task_handle  , 2);
-        vTaskPrioritySet(buzzer_task_handle , 2);
-        vTaskPrioritySet(screen_task_handle     , 2);
+        vTaskPrioritySet(wiegand_task_handle  , 1);
+        vTaskPrioritySet(rgb_task_handle      , 2);
+        vTaskPrioritySet(relay_task_handle    , 2);
+        vTaskPrioritySet(buzzer_task_handle   , 2);
+        vTaskPrioritySet(screen_task_handle   , 2);
+        vTaskPrioritySet(debounce_task_handle , 2);
 
         /*
         printf("Sizes = %u, %u\n", reservation_size, card_size);
@@ -359,6 +360,6 @@ void IRAM_ATTR data_task(void *arg)
         fclose(f);*/
 
         timestamp = timestamp_temp;
-        vTaskDelay(5000/portTICK_PERIOD_MS);
+        //vTaskDelay(5000/portTICK_PERIOD_MS);
     }
 }

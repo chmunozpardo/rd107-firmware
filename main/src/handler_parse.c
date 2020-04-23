@@ -129,7 +129,7 @@ void IRAM_ATTR parse_command(void)
                         "\"estado\":\"En cola\"}%n", &num0, &num1, &num2, cmd_parser, &chars) > 0)
     {
         offset += chars;
-        RELAY_SIGNAL(1);
+        RELAY_SIGNAL(DISPLAY_TIME);
         if(*(cmd_reader + offset) == '\0') break;
         else ++offset;
     }
@@ -152,7 +152,7 @@ void IRAM_ATTR parse_qr(void)
     {
         ESP_LOGD(TAG, "QR Code = %s", qr_placeholder);
         strcpy(screen_qr, qr_placeholder);
-        SCREEN_SIGNAL(screen_qr, 0, 5);
+        SCREEN_SIGNAL(screen_qr, 0, 0);
     }
     fclose(f);
     remove(FILE_JSON);
