@@ -214,7 +214,6 @@ void touch_input_keyboard(void)
                sTP_Draw.Ypoint >= 2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 20 &&
                sTP_Draw.Ypoint <= 2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 20 + button_Sign.Height)
             {
-                printf("Reserva\n");
                 touch_context_status = TOUCH_INPUT_RESERVATION;
                 SCREEN_SIGNAL("", 2, 0);
             }
@@ -223,7 +222,6 @@ void touch_input_keyboard(void)
                     sTP_Draw.Ypoint >= 2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 80 &&
                     sTP_Draw.Ypoint <= 2*QR_OFFSET + dreamit_LOGO_Big_Top.Height + 80 + button_Sign.Height)
             {
-                printf("Cedula\n");
                 touch_context_status = TOUCH_INPUT_RUT;
                 SCREEN_SIGNAL("", 2, 0);
             }
@@ -242,7 +240,6 @@ void touch_input_keyboard(void)
                     {
                         if(*(keyboard_str + i + 10*j) == '>')
                         {
-                            printf("Hola\n");
                             touch_context_status = TOUCH_QR_CODE;
                             search_reservation_code(keyboard_input_str);
                             memset(keyboard_input_str, 0, 15);
@@ -295,9 +292,8 @@ void touch_input_keyboard(void)
                     {
                         if(*(keyboard_str + i + 3*j) == '>')
                         {
-                            printf("Hola\n");
                             touch_context_status = TOUCH_QR_CODE;
-                            search_reservation_code(keyboard_input_str);
+                            search_rut(keyboard_input_str);
                             memset(keyboard_input_str, 0, 15);
                             keyboard_pos = 0;
                         }

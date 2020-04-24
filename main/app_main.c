@@ -15,8 +15,11 @@
 //static const char* TAG = "app_main";
 
 uint8_t touch_context_status = 0;
-uint32_t reservation_size    = 0;
+
+uint32_t rut_size            = 0;
 uint32_t card_size           = 0;
+uint32_t reservation_size    = 0;
+
 uint64_t timestamp           = 0;
 uint64_t timestamp_temp      = 0;
 
@@ -35,7 +38,8 @@ TaskHandle_t screen_task_handle   = NULL;
 TaskHandle_t wiegand_task_handle  = NULL;
 TaskHandle_t debounce_task_handle = NULL;
 
-SemaphoreHandle_t reg_semaphore         = NULL;
+SemaphoreHandle_t rut_semaphore         = NULL;
+SemaphoreHandle_t card_semaphore        = NULL;
 SemaphoreHandle_t reservation_semaphore = NULL;
 
 DRAM_ATTR CARD card_importer[COPY_SIZE]    = {0};
@@ -55,7 +59,8 @@ static void setup()
     esp_task_wdt_deinit();
 
     // Registers file semaphore
-    reg_semaphore         = xSemaphoreCreateMutex();
+    rut_semaphore         = xSemaphoreCreateMutex();
+    card_semaphore        = xSemaphoreCreateMutex();
     reservation_semaphore = xSemaphoreCreateMutex();
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 
@@ -63,8 +68,9 @@ static void setup()
     fs_init();
 
     // Remove data files
-    remove(FILE_CARDS);
     remove(FILE_JSON);
+    remove(FILE_RUTS);
+    remove(FILE_CARDS);
     remove(FILE_RESERVATIONS);
     //remove(FILE_CONFIG);
     remove(FILE_TIMESTAMP);

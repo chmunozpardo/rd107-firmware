@@ -69,8 +69,8 @@
 
 #define LOCAL_TIMEZONE      "<-04>4"
 
-//#define HOSTNAME            "https://192.168.1.88:8080/"
-#define HOSTNAME            "https://alpha-api.gestkontrol.cl/"
+#define HOSTNAME            "http://192.168.1.88:8080/"
+//#define HOSTNAME            "https://alpha-api.gestkontrol.cl/"
 #define URL                 HOSTNAME"control_acceso/obtenerMediosAccesoControladorBinario"
 #define URL_COMMAND         HOSTNAME"control_acceso/obtenerComandosManualesPendientesControlador"
 #define URL_QR              HOSTNAME"control_acceso/obtenerCodigoQR"
@@ -82,6 +82,7 @@
 #define FILE_JSON           "/spiffs/registers.json"
 #define FILE_CARDS          "/spiffs/registers.db"
 #define FILE_RESERVATIONS   "/spiffs/reservations.db"
+#define FILE_RUTS           "/spiffs/ruts.db"
 
 #define FILE_CONFIG         "/spiffs/config.txt"
 #define FILE_WIFI           "/spiffs/wifi.txt"
@@ -92,16 +93,21 @@
 #define BUZZER_GPIO         21
 #define RELAY_GPIO          22
 
+#define RUT                     rut_t
 #define CARD                    card_t
 #define RESERVATION             reservation_t
 
+#define RUT_SIZE                sizeof(RUT)
+#define RUT_READER_SIZE         (1024)
 #define CARD_SIZE               sizeof(CARD)
 #define CARD_READER_SIZE        (2048)
 #define RESERVATION_SIZE        sizeof(RESERVATION)
 #define RESERVATION_READER_SIZE (1024)
 
+#define RUT_COMPARE(A, B)               strncmp(A, B.rut, 10);
 #define CARD_COMPARE(A, B)              A.cardType == B.cardType && A.code1 == B.code1 && A.code2 == B.code2
-#define RESERVATION_COMPARE_QR(A, B)    strncmp(A, B.qr, 6);
+#define RESERVATION_COMPARE_QR(A, B)    strncmp(A, B.qr, 8);
+#define RESERVATION_COMPARE_RUT(A, B)   A.code1 == B.code1 && A.code2 == B.code2
 #define RESERVATION_COMPARE_CODE(A, B)  strncmp(A, B.code, 6);
 
 #define MIFARE(value)       (value & 0x000000FF) << 24 | \
@@ -299,6 +305,11 @@ typedef struct {
     POINT LCD_Y_Adjust;
 } LCD_DIS;
 
+typedef struct __attribute__((packed, aligned(1))) rut_structure{
+    char rut[10];
+    uint32_t index;
+} rut_t;
+
 typedef struct __attribute__((packed, aligned(1))) card_structure{
     uint8_t cardType;
     uint8_t permisos;
@@ -312,6 +323,8 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
 typedef struct __attribute__((packed, aligned(1))) reservation_structure{
     char qr[8];
     char code[6];
+    uint32_t code1;
+    uint32_t code2;
     uint64_t init_time;
     uint64_t end_time;
     uint32_t index;
@@ -375,10 +388,14 @@ extern uint8_t mac[6];
 extern time_t system_now;
 
 extern uint8_t  loaded_data;
+extern uint32_t rut_size;
 extern uint32_t card_size;
 extern uint32_t reservation_size;
 extern uint64_t timestamp;
 extern uint64_t timestamp_temp;
+
+extern RUT rut_importer[COPY_SIZE];
+extern RUT rut_data[RUT_READER_SIZE];
 
 extern CARD card_importer[COPY_SIZE];
 extern CARD card_data[CARD_READER_SIZE];
@@ -392,7 +409,8 @@ extern xQueueHandle relay_task_queue;
 extern xQueueHandle buzzer_task_queue;
 extern xQueueHandle screen_task_queue;
 
-extern SemaphoreHandle_t reg_semaphore;
+extern SemaphoreHandle_t rut_semaphore;
+extern SemaphoreHandle_t card_semaphore;
 extern SemaphoreHandle_t reservation_semaphore;
 
 extern TaskHandle_t ntp_task_handle;

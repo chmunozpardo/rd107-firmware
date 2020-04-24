@@ -34,7 +34,7 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
     uint32_t pos_save =    0;
     for(int i = 0; i < read_size; i++)
     {
-        xSemaphoreTake(reg_semaphore, portMAX_DELAY);
+        xSemaphoreTake(card_semaphore, portMAX_DELAY);
         f = fopen(FILE_CARDS, "r+");
         if(f == NULL) f = fopen(FILE_CARDS, "w+");
         check = 0;
@@ -61,7 +61,7 @@ static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
             ++card_size;
         }
         fclose(f);
-        xSemaphoreGive(reg_semaphore);
+        xSemaphoreGive(card_semaphore);
     }
 }
 
@@ -186,7 +186,7 @@ void IRAM_ATTR parse_data(void)
         }
         else
         {
-            xSemaphoreTake(reg_semaphore, portMAX_DELAY);
+            xSemaphoreTake(card_semaphore, portMAX_DELAY);
             g     = fopen(FILE_CARDS, "a+");
             count = new_regs / CARD_READER_SIZE;
             for(int i = 0; i < count; i++)
@@ -201,7 +201,7 @@ void IRAM_ATTR parse_data(void)
             fwrite(card_data, CARD_SIZE, read_size, g);
             RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
             fclose(g);
-            xSemaphoreGive(reg_semaphore);
+            xSemaphoreGive(card_semaphore);
         }
         ESP_LOGD(TAG, "Finished importing registers");
     }

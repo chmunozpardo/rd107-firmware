@@ -45,7 +45,7 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
         case HTTP_EVENT_ON_DATA:
             ESP_LOGD(TAG_HTTPS, "DATA, len=%d", evt->data_len);
             FILE *f;
-            printf("%.*s\n", evt->data_len, (char*)evt->data);
+            //printf("%.*s\n", evt->data_len, (char*)evt->data);
             f = fopen(FILE_JSON, "a+");
             if(f == NULL)
             {
@@ -296,7 +296,10 @@ void IRAM_ATTR data_task(void *arg)
         sprintf(lastTimestamp, "%ld", system_now);
         strcat(post_data, lastTimestamp);
 
-        ESP_LOGI(TAG, "Last timestamp = %llu | Total registers = %u | Total reservations = %u", timestamp, card_size, reservation_size);
+        ESP_LOGI(TAG, "Last timestamp = %llu | "
+                      "Total RUTs = %u | "
+                      "Total cards = %u | "
+                      "Total reservations = %u", timestamp, rut_size, card_size, reservation_size);
 
         data_client_set(&parse_data, URL);
         data_client_set(&parse_reservations, URL_RESERVATIONS);
@@ -310,56 +313,6 @@ void IRAM_ATTR data_task(void *arg)
         vTaskPrioritySet(screen_task_handle   , 2);
         vTaskPrioritySet(debounce_task_handle , 2);
 
-        /*
-        printf("Sizes = %u, %u\n", reservation_size, card_size);
-
-        uint32_t read_size = 0;
-        uint32_t count     = 0;
-        uint32_t rem       = 0;
-
-        FILE *f = NULL;
-
-        count = card_size / CARD_READER_SIZE;
-        rem   = card_size % CARD_READER_SIZE;
-        f = fopen(FILE_CARDS, "r");
-        for(int i = 0; i < count; i++)
-        {
-            read_size  = fread (card_data, CARD_SIZE, CARD_READER_SIZE, f);
-            for(int j = 0; j < read_size; j++)
-            {
-                printf("%u, %u, %u\n",card_data[j].index, card_data[j].code1, card_data[j].code2);
-            }
-        }
-        read_size  = fread (card_data, CARD_SIZE, rem, f);
-        for(int j = 0; j < read_size; j++)
-        {
-            printf("%u, %u, %u\n",card_data[j].index, card_data[j].code1, card_data[j].code2);
-        }
-        fclose(f);
-
-        count = reservation_size / RESERVATION_READER_SIZE;
-        rem   = reservation_size % RESERVATION_READER_SIZE;
-        f = fopen(FILE_RESERVATIONS, "r");
-        for(int i = 0; i < count; i++)
-        {
-            read_size  = fread (reservation_data, RESERVATION_SIZE, RESERVATION_READER_SIZE, f);
-            for(int j = 0; j < read_size; j++)
-            {
-                strftime(strftime_buf, sizeof(strftime_buf), "%c", localtime((time_t*)&reservation_data[j].init_time));
-                strftime(strftime_buf_end, sizeof(strftime_buf_end), "%c", localtime((time_t*)&reservation_data[j].end_time));
-                printf("%u, %s, %s, %s, %s\n",reservation_data[j].index, reservation_data[j].code,reservation_data[j].qr, strftime_buf, strftime_buf_end);
-            }
-        }
-        read_size  = fread (reservation_data, RESERVATION_SIZE, rem, f);
-        for(int j = 0; j < read_size; j++)
-        {
-            strftime(strftime_buf, sizeof(strftime_buf), "%c", localtime((time_t*)&reservation_data[j].init_time));
-            strftime(strftime_buf_end, sizeof(strftime_buf_end), "%c", localtime((time_t*)&reservation_data[j].end_time));
-            printf("%u, %8s, %6s, %s, %s\n",reservation_data[j].index, reservation_data[j].code,reservation_data[j].qr, strftime_buf, strftime_buf_end);
-        }
-        fclose(f);*/
-
         timestamp = timestamp_temp;
-        //vTaskDelay(5000/portTICK_PERIOD_MS);
     }
 }
