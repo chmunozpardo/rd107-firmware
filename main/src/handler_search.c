@@ -83,7 +83,8 @@ void IRAM_ATTR search_card(uint8_t size, uint64_t value)
 
 void IRAM_ATTR search_reservation_qr(char *qr)
 {
-    status = 1;
+    status = 0;
+    time(&system_now);
     RGB_SIGNAL(RGB_ORANGE, RGB_LEDS, 0);
     xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
     f = fopen(FILE_RESERVATIONS, "r");
@@ -100,14 +101,14 @@ void IRAM_ATTR search_reservation_qr(char *qr)
         for(int i = 0; i < read_size; i++)
         {
             status = RESERVATION_COMPARE_QR(qr, reservation_data[i]);
-            if(status == 0) break;
+            if(status) break;
         }
     }
 
     fclose(f);
     xSemaphoreGive(reservation_semaphore);
 
-    if(status == 0)
+    if(status)
     {
         ESP_LOGD(TAG, " --> Reservation found <--");
         RELAY_SIGNAL(DISPLAY_TIME);
@@ -125,7 +126,8 @@ void IRAM_ATTR search_reservation_qr(char *qr)
 
 void IRAM_ATTR search_reservation_code(char *code)
 {
-    status = 1;
+    status = 0;
+    time(&system_now);
     RGB_SIGNAL(RGB_ORANGE, RGB_LEDS, 0);
     xSemaphoreTake(reservation_semaphore, portMAX_DELAY);
     f = fopen(FILE_RESERVATIONS, "r");
@@ -142,14 +144,14 @@ void IRAM_ATTR search_reservation_code(char *code)
         for(int i = 0; i < read_size; i++)
         {
             status = RESERVATION_COMPARE_CODE(code, reservation_data[i]);
-            if(status == 0) break;
+            if(status) break;
         }
     }
 
     fclose(f);
     xSemaphoreGive(reservation_semaphore);
 
-    if(status == 0)
+    if(status)
     {
         ESP_LOGD(TAG, " --> Reservation found <--");
         RELAY_SIGNAL(DISPLAY_TIME);
@@ -168,6 +170,7 @@ void IRAM_ATTR search_reservation_code(char *code)
 void IRAM_ATTR search_rut(char *rut)
 {
     status = 0;
+    time(&system_now);
     RGB_SIGNAL(RGB_ORANGE, RGB_LEDS, 0);
 
     uint32_t rut_int   = atoi(rut);

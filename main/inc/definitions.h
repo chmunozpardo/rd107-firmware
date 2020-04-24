@@ -38,6 +38,11 @@
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
 
+#define RD_MODELO           "RD-107"
+#define RD_VERSION          "0.1"
+#define RD_SERIE            "cmunoz"
+#define RD_CANALES          "1"
+
 #define DISPLAY_TIME    2
 
 #define COLOR           uint16_t
@@ -61,11 +66,6 @@
 
 #define WIFI_WEBSERVER      0
 #define REG_WEBSERVER       1
-
-#define RD_MODELO           "RD-107"
-#define RD_VERSION          "0.1"
-#define RD_SERIE            "cmunoz"
-#define RD_CANALES          "1"
 
 #define LOCAL_TIMEZONE      "<-04>4"
 
@@ -104,11 +104,11 @@
 #define RESERVATION_SIZE        sizeof(RESERVATION)
 #define RESERVATION_READER_SIZE (1024)
 
-#define RUT_COMPARE(A, B)               strncmp(A, B.rut, 10);
-#define CARD_COMPARE(A, B)              A.cardType == B.cardType && A.code1 == B.code1 && A.code2 == B.code2
-#define RESERVATION_COMPARE_QR(A, B)    strncmp(A, B.qr, 8);
-#define RESERVATION_COMPARE_RUT(A, B)   A.code1 == B.code1 && A.code2 == B.code2
-#define RESERVATION_COMPARE_CODE(A, B)  strncmp(A, B.code, 6);
+#define RUT_COMPARE(A, B)               strncmp(A, B.rut, 10) == 0;
+#define CARD_COMPARE(A, B)              A.cardType == B.cardType && A.code1 == B.code1 && A.code2 == B.code2;
+#define RESERVATION_COMPARE_QR(A, B)    strncmp(A, B.qr, 8) == 0 && system_now >= B.init_time && system_now <= B.end_time;
+#define RESERVATION_COMPARE_RUT(A, B)   A.code1 == B.code1 && A.code2 == B.code2 && system_now >= B.init_time && system_now <= B.end_time;
+#define RESERVATION_COMPARE_CODE(A, B)  strncmp(A, B.code, 6) == 0 && system_now >= B.init_time && system_now <= B.end_time;
 
 #define MIFARE(value)       (value & 0x000000FF) << 24 | \
                             (value & 0x0000FF00) <<  8 | \

@@ -297,9 +297,9 @@ void IRAM_ATTR data_task(void *arg)
         strcat(post_data, lastTimestamp);
 
         ESP_LOGI(TAG, "Last timestamp = %llu | "
-                      "Total RUTs = %u | "
+                      "Controller timestamp = %ld | "
                       "Total cards = %u | "
-                      "Total reservations = %u", timestamp, rut_size, card_size, reservation_size);
+                      "Total reservations = %u", timestamp, system_now, card_size, reservation_size);
 
         data_client_set(&parse_data, URL);
         data_client_set(&parse_reservations, URL_RESERVATIONS);
@@ -314,5 +314,6 @@ void IRAM_ATTR data_task(void *arg)
         vTaskPrioritySet(debounce_task_handle , 2);
 
         timestamp = timestamp_temp;
+        time(&system_now);
     }
 }
