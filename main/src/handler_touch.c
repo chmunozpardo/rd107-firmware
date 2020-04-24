@@ -15,6 +15,20 @@ static char keyboard_input_str[15] = "";
 
 static uint8_t keyboard_pos = 0;
 
+static char digito_verificador_rut(char *rut_str)
+{
+   uint32_t sum = 0, factor = 2;
+   uint32_t rut = atoi(rut_str);
+   while(rut)
+   {
+       sum   += (rut%10)*factor;
+       rut   /= 10;
+       factor = factor==7 ? 2 : factor+1;
+   }
+   const uint32_t res = 11 - sum%11;
+   return res == 11? '0' : res == 10? 'k' : res+'0';
+}
+
 static IRAM_ATTR void debounce_isr(void* arg)
 {
     BaseType_t xTaskWokenByReceive = pdFALSE;
@@ -176,7 +190,6 @@ void touch_init_f(void)
 
 void touch_input_keyboard(void)
 {
-    const char *keyboard_str = "123456789<0>";
     if(sTP_DEV.chStatus & TP_PRESS_DOWN)
     {
         if(touch_context_status == TOUCH_NONE)
@@ -255,11 +268,11 @@ void touch_input_keyboard(void)
                                                   LCD_WHITE, DRAW_FULL, DOT_PIXEL_1X1);
                             keyboard_input_str[--keyboard_pos] = '\0';
                             screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
-                                          QR_OFFSET*3,
-                                          keyboard_input_str,
-                                          &Font24,
-                                          LCD_WHITE,
-                                          LCD_BLACK);
+                                              QR_OFFSET*3,
+                                              keyboard_input_str,
+                                              &Font24,
+                                              LCD_WHITE,
+                                              LCD_BLACK);
                         }
                         if(*(keyboard_str + i + 10*j) != '<' &&
                            *(keyboard_str + i + 10*j) != '>' &&
@@ -300,30 +313,43 @@ void touch_input_keyboard(void)
                         if(*(keyboard_str + i + 3*j) == '<' &&
                            keyboard_pos > 0)
                         {
-                            screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                            screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*(keyboard_pos+2)/2,
                                                   QR_OFFSET*3,
-                                                  sLCD_DIS.LCD_Dis_Column/2 + Font24.Width*keyboard_pos/2,
+                                                  sLCD_DIS.LCD_Dis_Column/2 + Font24.Width*(keyboard_pos+2)/2,
                                                   QR_OFFSET*3 + Font24.Height,
                                                   LCD_WHITE, DRAW_FULL, DOT_PIXEL_1X1);
                             keyboard_input_str[--keyboard_pos] = '\0';
-                            screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
-                                          QR_OFFSET*3,
-                                          keyboard_input_str,
-                                          &Font24,
-                                          LCD_WHITE,
-                                          LCD_BLACK);
+                            if(keyboard_pos > 0)
+                            {
+                                char digito          = digito_verificador_rut(keyboard_input_str);
+                                char display_rut[18] = "";
+                                strcpy(display_rut, keyboard_input_str);
+                                strcat(display_rut, "-");
+                                strncat(display_rut, &digito,1);
+                                screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*(keyboard_pos+2)/2,
+                                                  QR_OFFSET*3,
+                                                  display_rut,
+                                                  &Font24,
+                                                  LCD_WHITE,
+                                                  LCD_BLACK);
+                            }
                         }
                         if(*(keyboard_str + i + 3*j) != '<' &&
                            *(keyboard_str + i + 3*j) != '>' &&
                            keyboard_pos < 15)
                         {
                             keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 3*j);
-                            screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
-                                          QR_OFFSET*3,
-                                          keyboard_input_str,
-                                          &Font24,
-                                          LCD_WHITE,
-                                          LCD_BLACK);
+                            char digito          = digito_verificador_rut(keyboard_input_str);
+                            char display_rut[18] = "";
+                            strcpy(display_rut, keyboard_input_str);
+                            strcat(display_rut, "-");
+                            strncat(display_rut, &digito, 1);
+                            screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*(keyboard_pos+2)/2,
+                                              QR_OFFSET*3,
+                                              display_rut,
+                                              &Font24,
+                                              LCD_WHITE,
+                                              LCD_BLACK);
                         }
                     }
                 }

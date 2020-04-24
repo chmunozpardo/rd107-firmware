@@ -7,7 +7,7 @@ static DRAM_ATTR bool status        =    0;
 static DRAM_ATTR uint32_t read_size =    0;
 static FILE *f                      = NULL;
 
-static char digito_verificador_rut(uint32_t rut)
+static uint8_t digito_verificador_rut(uint32_t rut)
 {
    uint32_t sum = 0, factor = 2;
    while(rut)
@@ -17,8 +17,7 @@ static char digito_verificador_rut(uint32_t rut)
        factor = factor==7 ? 2 : factor+1;
    }
    const uint32_t res = 11 - sum%11;
-
-   return res == 11? '0' : res == 10? 'k' : res+'0';
+   return res == 11? 0 : res == 10? 0 : res;
 }
 
 void IRAM_ATTR search_card(uint8_t size, uint64_t value)
@@ -172,10 +171,18 @@ void IRAM_ATTR search_rut(char *rut)
     RGB_SIGNAL(RGB_ORANGE, RGB_LEDS, 0);
 
     uint32_t rut_int   = atoi(rut);
-    char rut_ver       = digito_verificador_rut(rut_int);
+    if(rut_int == 0)
+    {
+        ESP_LOGD(TAG, " --> RUT not valid <--");
+        SCREEN_SIGNAL("BAD", 1, DISPLAY_TIME);
+        RGB_SIGNAL(RGB_RED, RGB_LEDS, DISPLAY_TIME);
+        RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);
+        return;
+    }
+    uint8_t rut_ver    = digito_verificador_rut(rut_int);
     inputCard.cardType = 7;
     inputCard.code1    = rut_int;
-    inputCard.code2    = atoi(&rut_ver);
+    inputCard.code2    = rut_ver;
 
     xSemaphoreTake(card_semaphore, portMAX_DELAY);
     f = fopen(FILE_CARDS, "r");

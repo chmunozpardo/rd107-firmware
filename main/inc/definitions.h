@@ -69,8 +69,8 @@
 
 #define LOCAL_TIMEZONE      "<-04>4"
 
-#define HOSTNAME            "http://192.168.1.88:8080/"
-//#define HOSTNAME            "https://alpha-api.gestkontrol.cl/"
+//#define HOSTNAME            "http://192.168.1.88:8080/"
+#define HOSTNAME            "https://alpha-api.gestkontrol.cl/"
 #define URL                 HOSTNAME"control_acceso/obtenerMediosAccesoControladorBinario"
 #define URL_COMMAND         HOSTNAME"control_acceso/obtenerComandosManualesPendientesControlador"
 #define URL_QR              HOSTNAME"control_acceso/obtenerCodigoQR"
