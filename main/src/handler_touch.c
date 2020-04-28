@@ -11,9 +11,11 @@ static void *touch_context = NULL;
 
 static DRAM_ATTR uint8_t debounce_touch = 0;
 
-static char keyboard_input_str[15] = "";
+static char keyboard_input_str[32] = "";
 
+static uint8_t wifi_list    = 0;
 static uint8_t keyboard_pos = 0;
+static uint8_t keyboard_min = 0;
 
 static char digito_verificador_rut(char *rut_str)
 {
@@ -198,26 +200,207 @@ void touch_input_keyboard(void)
         }
         else if(touch_context_status == TOUCH_SET_WIFI)
         {
-            if(sTP_Draw.Xpoint >= sLCD_DIS.LCD_Dis_Column/2 - button_Sign.Width /2 &&
-               sTP_Draw.Xpoint <= sLCD_DIS.LCD_Dis_Column/2 + button_Sign.Width /2 &&
-               sTP_Draw.Ypoint >= 220 + 15 + QR_OFFSET + Font20.Height &&
-               sTP_Draw.Ypoint <= 220 + 15 + QR_OFFSET + Font20.Height + button_Sign.Height)
+            if(sTP_Draw.Xpoint >= sLCD_DIS.LCD_Dis_Column - button_Sign.Width - 10 &&
+               sTP_Draw.Xpoint <= sLCD_DIS.LCD_Dis_Column -                 0 - 10 &&
+               sTP_Draw.Ypoint >= 210 + 15 + 10 +   button_Sign.Height/2 + Font16.Height/2 &&
+               sTP_Draw.Ypoint <= 210 + 15 + 10 + 3*button_Sign.Height/2 + Font16.Height/2)
             {
                 *(((wifi_context_t*)touch_context)->opt)      = 0;
                 *(((wifi_context_t*)touch_context)->http_ind) = 1;
                 touch_context_status = TOUCH_NONE;
             }
+            else if(sTP_Draw.Xpoint >= sLCD_DIS.LCD_Dis_Column - button_Sign.Width - 10 &&
+                    sTP_Draw.Xpoint <= sLCD_DIS.LCD_Dis_Column -                 0 - 10 &&
+                    sTP_Draw.Ypoint >= 210 + 15 - button_Sign.Height/2 + Font16.Height/2 &&
+                    sTP_Draw.Ypoint <= 210 + 15 + button_Sign.Height/2 + Font16.Height/2)
+            {
+                touch_context_status = TOUCH_SET_WIFI_LIST;
+                uint8_t tmp_list     = *(((wifi_context_t*)touch_context)->ap_count);
+                wifi_list            = tmp_list <= 10 ? tmp_list : 10;
+                screen_clear(LCD_WHITE);
+                for(int i = 0; i < wifi_list; i++)
+                    screen_print_text(10, 10 + i*(Font20.Height + 4),
+                          (char*)((wifi_context_t*)touch_context)->ap_info[i].ssid, &Font20, LCD_WHITE, LCD_BLACK);
+
+                screen_draw_from_rom(sLCD_DIS.LCD_Dis_Column - button_Sign.Width - 10,
+                                     sLCD_DIS.LCD_Dis_Page - 10 - button_Sign.Height,
+                                     &button_Sign, LCD_WHITE);
+                screen_print_transp_text(sLCD_DIS.LCD_Dis_Column - button_Sign.Width/2 - 10 - Font24.Width*4/2,
+                                         sLCD_DIS.LCD_Dis_Page - 10 - button_Sign.Height/2 - Font24.Height/2,
+                                         "Back", &Font24, LCD_WHITE);
+            }
+        }
+        else if(touch_context_status == TOUCH_SET_WIFI_LIST)
+        {
+            for(int i = 0; i < wifi_list; i++)
+            {
+                if(sTP_Draw.Xpoint >=                           10 &&
+                   sTP_Draw.Xpoint <= sLCD_DIS.LCD_Dis_Column - 10 &&
+                   sTP_Draw.Ypoint >= 10 +     i*(Font20.Height + 4) &&
+                   sTP_Draw.Ypoint <= 10 + (i+1)*(Font20.Height + 4))
+                {
+                    wifi_list = i;
+                    screen_clear(LCD_WHITE);
+                    screen_print_text(10, 10,
+                                      (char*)((wifi_context_t*)touch_context)->ap_info[i].ssid,
+                                      &Font20,
+                                      LCD_WHITE,
+                                      LCD_BLACK);
+                    screen_draw_keyboard(LCD_KEYBOARD_MAY);
+                    touch_context_status = TOUCH_SET_WIFI_PASSWORD;
+                }
+            }
+            if(sTP_Draw.Xpoint >= sLCD_DIS.LCD_Dis_Column - button_Sign.Width - 10 &&
+               sTP_Draw.Xpoint <= sLCD_DIS.LCD_Dis_Column -                 0 - 10 &&
+               sTP_Draw.Ypoint >= sLCD_DIS.LCD_Dis_Page - 10 - button_Sign.Height &&
+               sTP_Draw.Ypoint <= sLCD_DIS.LCD_Dis_Page - 10 -                  0)
+            {
+                screen_print_conf("Connect to\nrd107ap2020\nand browse to\n192.168.4.1/config\nto configure Wi-Fi", true);
+                touch_context_status = TOUCH_SET_WIFI;
+            }
+        }
+        else if(touch_context_status == TOUCH_SET_WIFI_PASSWORD)
+        {
+            char *keyboard_str = (char*) malloc(41);
+            if(keyboard_min == 0) strncpy(keyboard_str, LCD_KEYBOARD_MAY, 41);
+            else strncpy(keyboard_str, LCD_KEYBOARD_MIN, 41);
+            for(int j = 0; j < 4;j++)
+            {
+                for(int i = 0; i < 10;i++)
+                {
+                    if(sTP_Draw.Xpoint >= QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/(10) &&
+                       sTP_Draw.Xpoint <= QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/(10) &&
+                       sTP_Draw.Ypoint >= sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20 &&
+                       sTP_Draw.Ypoint <= sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20)
+                    {
+                        if(*(keyboard_str + i + 10*j) == '_')
+                        {
+                            keyboard_min = 1;
+                            screen_draw_keyboard(LCD_KEYBOARD_MIN);
+                        }
+                        if(*(keyboard_str + i + 10*j) == '^')
+                        {
+                            keyboard_min = 0;
+                            screen_draw_keyboard(LCD_KEYBOARD_MAY);
+                        }
+                        if(*(keyboard_str + i + 10*j) == '>')
+                        {
+                            strcpy(((wifi_context_t*)touch_context)->wifi_password, keyboard_input_str);
+                            *(((wifi_context_t*)touch_context)->opt)      = wifi_list + 1;
+                            *(((wifi_context_t*)touch_context)->http_ind) = 1;
+                            memset(keyboard_input_str, 0, 32);
+                            keyboard_pos = 0;
+                            touch_context_status = TOUCH_NONE;
+                        }
+                        if(*(keyboard_str + i + 10*j) == '<' &&
+                           keyboard_pos > 0)
+                        {
+                            screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                                  QR_OFFSET*3,
+                                                  sLCD_DIS.LCD_Dis_Column/2 + Font24.Width*keyboard_pos/2,
+                                                  QR_OFFSET*3 + Font24.Height,
+                                                  LCD_WHITE, DRAW_FULL, DOT_PIXEL_1X1);
+                            keyboard_input_str[--keyboard_pos] = '\0';
+                            screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                              QR_OFFSET*3,
+                                              keyboard_input_str,
+                                              &Font24,
+                                              LCD_WHITE,
+                                              LCD_BLACK);
+                        }
+                        if(*(keyboard_str + i + 10*j) != '<' &&
+                           *(keyboard_str + i + 10*j) != '>' &&
+                           *(keyboard_str + i + 10*j) != ' ' &&
+                           *(keyboard_str + i + 10*j) != '_' &&
+                           *(keyboard_str + i + 10*j) != '^' &&
+                           keyboard_pos < 32)
+                        {
+                            keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 10*j);
+                            screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
+                                          QR_OFFSET*3,
+                                          keyboard_input_str,
+                                          &Font24,
+                                          LCD_WHITE,
+                                          LCD_BLACK);
+                        }
+                    }
+                }
+            }
         }
         else if(touch_context_status == TOUCH_SET_DEVICE)
         {
-            if(sTP_Draw.Xpoint >= sLCD_DIS.LCD_Dis_Column/2 - button_Sign.Width /2 &&
-               sTP_Draw.Xpoint <= sLCD_DIS.LCD_Dis_Column/2 + button_Sign.Width /2 &&
-               sTP_Draw.Ypoint >= 220 + 15 + QR_OFFSET + Font20.Height &&
-               sTP_Draw.Ypoint <= 220 + 15 + QR_OFFSET + Font20.Height + button_Sign.Height)
+            if(sTP_Draw.Xpoint >= sLCD_DIS.LCD_Dis_Column - button_Sign.Width - 10 &&
+               sTP_Draw.Xpoint <= sLCD_DIS.LCD_Dis_Column -                 0 - 10 &&
+               sTP_Draw.Ypoint >= 210 + 15 + 10 +   button_Sign.Height/2 + Font16.Height/2 &&
+               sTP_Draw.Ypoint <= 210 + 15 + 10 + 3*button_Sign.Height/2 + Font16.Height/2)
             {
                 *(((reg_context_t*)touch_context)->opt_web)  = 'y';
                 *(((reg_context_t*)touch_context)->http_ind) =  1 ;
                 touch_context_status = TOUCH_NONE;
+            }
+            else if(sTP_Draw.Xpoint >= sLCD_DIS.LCD_Dis_Column - button_Sign.Width - 10 &&
+                    sTP_Draw.Xpoint <= sLCD_DIS.LCD_Dis_Column -                 0 - 10 &&
+                    sTP_Draw.Ypoint >= 210 + 15 - button_Sign.Height/2 + Font16.Height/2 &&
+                    sTP_Draw.Ypoint <= 210 + 15 + button_Sign.Height/2 + Font16.Height/2)
+            {
+                touch_context_status = TOUCH_SET_DEVICE_CODE;
+                screen_draw_input_interface();
+            }
+        }
+        else if(touch_context_status == TOUCH_SET_DEVICE_CODE)
+        {
+            const char *keyboard_str = "123456789<0>";
+            for(int j = 0; j < 4;j++)
+            {
+                for(int i = 0; i < 3;i++)
+                {
+                    if(sTP_Draw.Xpoint >= QR_OFFSET +     i*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/(3) &&
+                       sTP_Draw.Xpoint <= QR_OFFSET + (i+1)*(sLCD_DIS.LCD_Dis_Column - 2*QR_OFFSET)/(3) &&
+                       sTP_Draw.Ypoint >= sLCD_DIS.LCD_Dis_Page/2 +     j*40 - 20 &&
+                       sTP_Draw.Ypoint <= sLCD_DIS.LCD_Dis_Page/2 + (j+1)*40 - 20)
+                    {
+                        if(*(keyboard_str + i + 3*j) == '>')
+                        {
+                            strcpy(((reg_context_t*)touch_context)->registration_code, keyboard_input_str);
+                            *(((reg_context_t*)touch_context)->opt_web)  = 'n';
+                            *(((reg_context_t*)touch_context)->http_ind) =  1 ;
+                            memset(keyboard_input_str, 0, 32);
+                            keyboard_pos = 0;
+                            touch_context_status = TOUCH_NONE;
+                        }
+                        if(*(keyboard_str + i + 3*j) == '<' &&
+                           keyboard_pos > 0)
+                        {
+                            screen_draw_rectangle(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*(keyboard_pos)/2,
+                                                  QR_OFFSET*3,
+                                                  sLCD_DIS.LCD_Dis_Column/2 + Font24.Width*(keyboard_pos)/2,
+                                                  QR_OFFSET*3 + Font24.Height,
+                                                  LCD_WHITE, DRAW_FULL, DOT_PIXEL_1X1);
+                            keyboard_input_str[--keyboard_pos] = '\0';
+                            if(keyboard_pos > 0)
+                            {
+                                screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*(keyboard_pos)/2,
+                                                  QR_OFFSET*3,
+                                                  keyboard_input_str,
+                                                  &Font24,
+                                                  LCD_WHITE,
+                                                  LCD_BLACK);
+                            }
+                        }
+                        if(*(keyboard_str + i + 3*j) != '<' &&
+                           *(keyboard_str + i + 3*j) != '>' &&
+                           keyboard_pos < 32)
+                        {
+                            keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 3*j);
+                            screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*(keyboard_pos)/2,
+                                              QR_OFFSET*3,
+                                              keyboard_input_str,
+                                              &Font24,
+                                              LCD_WHITE,
+                                              LCD_BLACK);
+                        }
+                    }
+                }
             }
         }
         else if(touch_context_status == TOUCH_QR_CODE)
@@ -255,7 +438,7 @@ void touch_input_keyboard(void)
                         {
                             touch_context_status = TOUCH_QR_CODE;
                             search_reservation_code(keyboard_input_str);
-                            memset(keyboard_input_str, 0, 15);
+                            memset(keyboard_input_str, 0, 32);
                             keyboard_pos = 0;
                         }
                         if(*(keyboard_str + i + 10*j) == '<' &&
@@ -277,7 +460,7 @@ void touch_input_keyboard(void)
                         if(*(keyboard_str + i + 10*j) != '<' &&
                            *(keyboard_str + i + 10*j) != '>' &&
                            *(keyboard_str + i + 10*j) != ' ' &&
-                           keyboard_pos < 15)
+                           keyboard_pos < 32)
                         {
                             keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 10*j);
                             screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*keyboard_pos/2,
@@ -307,7 +490,7 @@ void touch_input_keyboard(void)
                         {
                             touch_context_status = TOUCH_QR_CODE;
                             search_rut(keyboard_input_str);
-                            memset(keyboard_input_str, 0, 15);
+                            memset(keyboard_input_str, 0, 32);
                             keyboard_pos = 0;
                         }
                         if(*(keyboard_str + i + 3*j) == '<' &&
@@ -336,7 +519,7 @@ void touch_input_keyboard(void)
                         }
                         if(*(keyboard_str + i + 3*j) != '<' &&
                            *(keyboard_str + i + 3*j) != '>' &&
-                           keyboard_pos < 15)
+                           keyboard_pos < 32)
                         {
                             keyboard_input_str[keyboard_pos++] = *(keyboard_str + i + 3*j);
                             char digito          = digito_verificador_rut(keyboard_input_str);

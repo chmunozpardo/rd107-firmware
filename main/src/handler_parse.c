@@ -12,7 +12,7 @@ static FILE *g = NULL;
 void parse_register(void)
 {
     f = fopen(FILE_JSON, "r");
-    if (f == NULL)
+    if(f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
         return;
@@ -24,6 +24,26 @@ void parse_register(void)
         );
     fclose(f);
     remove(FILE_JSON);
+}
+
+void parse_validation(void)
+{
+    f = fopen(FILE_JSON, "r");
+    if(f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file for reading");
+        f = fopen(FILE_JSON, "w");
+        fprintf(f, "%s", "ERROR");
+        fclose(f);
+        return;
+    }
+    char validation_placeholder[6] = "";
+    fscanf(f, " {\"estado\":\"%[^\",}]\"}", validation_placeholder);
+    fclose(f);
+    remove(FILE_JSON);
+    f = fopen(FILE_JSON, "w");
+    fprintf(f, "%s", validation_placeholder);
+    fclose(f);
 }
 
 static IRAM_ATTR void parse_insert_card(CARD *input, uint32_t read_size)
@@ -107,7 +127,7 @@ static IRAM_ATTR void parse_insert_reservation(RESERVATION *input, uint32_t read
 void IRAM_ATTR parse_command(void)
 {
     f = fopen(FILE_JSON, "r");
-    if (f == NULL)
+    if(f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
         return;
@@ -140,7 +160,7 @@ void IRAM_ATTR parse_command(void)
 void IRAM_ATTR parse_qr(void)
 {
     f = fopen(FILE_JSON, "r");
-    if (f == NULL)
+    if(f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
         return;
@@ -161,7 +181,7 @@ void IRAM_ATTR parse_qr(void)
 void IRAM_ATTR parse_data(void)
 {
     f = fopen(FILE_JSON, "r");
-    if (f == NULL)
+    if(f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
         return;
@@ -225,7 +245,7 @@ void IRAM_ATTR parse_data(void)
 void IRAM_ATTR parse_reservations(void)
 {
     f = fopen(FILE_JSON, "r");
-    if (f == NULL)
+    if(f == NULL)
     {
         ESP_LOGE(TAG, "Failed to open file for reading");
         return;
@@ -245,7 +265,7 @@ void IRAM_ATTR parse_reservations(void)
                 read_size  = fread(reservation_importer, RESERVATION_SIZE, COPY_SIZE, f);
                 parse_insert_reservation(reservation_importer, read_size);
             };
-            read_size  = fread (reservation_importer, RESERVATION_SIZE, new_regs%COPY_SIZE, f);
+            read_size  = fread(reservation_importer, RESERVATION_SIZE, new_regs%COPY_SIZE, f);
             parse_insert_reservation(reservation_importer, read_size);
         }
         else
@@ -260,7 +280,7 @@ void IRAM_ATTR parse_reservations(void)
                 fwrite(reservation_data, RESERVATION_SIZE, read_size, g);
                 RGB_SIGNAL(RGB_GREEN, (RGB_LEDS * i)/count, 0);
             };
-            read_size  = fread (reservation_data, RESERVATION_SIZE, new_regs % RESERVATION_READER_SIZE, f);
+            read_size  = fread(reservation_data, RESERVATION_SIZE, new_regs % RESERVATION_READER_SIZE, f);
             reservation_size += read_size;
             fwrite(reservation_data, RESERVATION_SIZE, read_size, g);
             RGB_SIGNAL(RGB_CYAN, RGB_LEDS, 0);

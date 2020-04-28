@@ -15,11 +15,9 @@
 //static const char* TAG = "app_main";
 
 uint8_t touch_context_status = 0;
-
 uint32_t rut_size            = 0;
 uint32_t card_size           = 0;
 uint32_t reservation_size    = 0;
-
 uint64_t timestamp           = 0;
 uint64_t timestamp_temp      = 0;
 
@@ -72,7 +70,6 @@ static void setup()
     remove(FILE_RUTS);
     remove(FILE_CARDS);
     remove(FILE_RESERVATIONS);
-    //remove(FILE_CONFIG);
     remove(FILE_TIMESTAMP);
 
     //FILE *f  = fopen(FILE_CONFIG, "w");
@@ -92,15 +89,15 @@ static void setup()
     //while(1){;}
 
     // Initiate WiFi configurations
-    wifi_init();
+    while(!wifi_init());
     ntp_init();
 
     // Register device
-    data_register();
+    while(!data_register());
 
     // --------------------------------------------
     // Enable Watchdog after all the configurations
-    esp_task_wdt_init(CONFIG_ESP_TASK_WDT_TIMEOUT_MS, false);
+    esp_task_wdt_init(CONFIG_ESP_TASK_WDT_TIMEOUT_S, false);
     esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(0));
     esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(1));
 

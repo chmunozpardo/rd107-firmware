@@ -525,7 +525,7 @@ void screen_print_transp_text(POINT Xstart, POINT Ystart, const char *pString,
     }
 }
 
-static void screen_draw_from_rom(POINT Xpoint, POINT Ypoint, sFONT *table, COLOR Color_Background)
+void screen_draw_from_rom(POINT Xpoint, POINT Ypoint, sFONT *table, COLOR Color_Background)
 {
     POINT Page, Column;
     uint32_t buffer_n = 0;
@@ -670,7 +670,7 @@ static void screen_check()
                       "APROBADO", &Font24, LCD_GREEN, LCD_WHITE);
 }
 
-void screen_print_conf(char *text)
+void screen_print_conf(char *text, bool def_load)
 {
     screen_clear(LCD_BACKGROUND);
     screen_logo(10, 10);
@@ -679,20 +679,33 @@ void screen_print_conf(char *text)
                       20,
                       "dreamit.cl",
                       &Font16, FONT_BACKGROUND, FONT_FOREGROUND);
-    screen_print_text(10, 80, text, &Font24, FONT_BACKGROUND, FONT_FOREGROUND);
-    screen_draw_rectangle(10,  60, sLCD_DIS.LCD_Dis_Column - 10,  66, LCD_LOGO_BOT, DRAW_FULL, DOT_PIXEL_DFT);
-    screen_draw_rectangle(10, 214, sLCD_DIS.LCD_Dis_Column - 10, 220, LCD_LOGO_BOT, DRAW_FULL, DOT_PIXEL_DFT);
-    screen_print_text(sLCD_DIS.LCD_Dis_Column/2 - Font20.Width*27/2,
-                      220 + 15,
-                      "Load default configuration:",
-                      &Font20, FONT_BACKGROUND, FONT_FOREGROUND);
+    screen_print_text(10, 65, text, &Font24, FONT_BACKGROUND, FONT_FOREGROUND);
+    screen_draw_rectangle(10,  50, sLCD_DIS.LCD_Dis_Column - 10,  56, LCD_LOGO_BOT, DRAW_FULL, DOT_PIXEL_DFT);
+    screen_draw_rectangle(10, 194, sLCD_DIS.LCD_Dis_Column - 10, 200, LCD_LOGO_BOT, DRAW_FULL, DOT_PIXEL_DFT);
 
-    screen_draw_from_rom(sLCD_DIS.LCD_Dis_Column/2 - button_Sign.Width /2,
-                         220 + 15 + QR_OFFSET + Font20.Height,
+    screen_print_text(10, 210 + 15,
+                      "Set new configuration:",
+                      &Font16, FONT_BACKGROUND, FONT_FOREGROUND);
+    screen_draw_from_rom(sLCD_DIS.LCD_Dis_Column - button_Sign.Width - 10,
+                         210 + 15 - button_Sign.Height/2 + Font16.Height/2,
                          &button_Sign, LCD_WHITE);
-    screen_print_transp_text(sLCD_DIS.LCD_Dis_Column/2 - Font24.Width*4/2,
-                             220 + 15 + QR_OFFSET + button_Sign.Height/2 + Font20.Height - Font24.Height/2,
-                             "Load", &Font24, LCD_WHITE);
+    screen_print_transp_text(sLCD_DIS.LCD_Dis_Column - button_Sign.Width/2 - 10 - Font24.Width*3/2,
+                             210 + 15 - Font24.Height/2 + Font16.Height/2,
+                             "New", &Font24, LCD_WHITE);
+
+    if(def_load)
+    {
+        screen_print_text(10, 210 + 15 + 10 + button_Sign.Height,
+                          "Load default configuration:",
+                          &Font16, FONT_BACKGROUND, FONT_FOREGROUND);
+
+        screen_draw_from_rom(sLCD_DIS.LCD_Dis_Column - button_Sign.Width - 10,
+                             210 + 15 + 10 + button_Sign.Height/2 + Font16.Height/2,
+                             &button_Sign, LCD_WHITE);
+        screen_print_transp_text(sLCD_DIS.LCD_Dis_Column - button_Sign.Width/2 - 10 - Font24.Width*4/2,
+                                 210 + 15 + 10 + button_Sign.Height + Font16.Height/2 - Font24.Height/2,
+                                 "Load", &Font24, LCD_WHITE);
+    }
 }
 
 static void screen_interface()
@@ -724,10 +737,10 @@ static void screen_interface()
     touch_set_context("", TOUCH_QR_CODE);
 }
 
-void screen_draw_input_reservation(void)
+void screen_draw_keyboard(const char *keyboard_str_in)
 {
-    screen_clear(LCD_BACKGROUND);
-    const char *keyboard_str = "1234567890QWERTYUIOPASDFGHJKL< ZXCVBNM >";
+    char *keyboard_str = (char*)malloc(41);
+    strncpy(keyboard_str, keyboard_str_in, 41);
     for(int j = 0; j < 4;j++)
     {
         for(int i = 0; i < 10;i++)
@@ -745,7 +758,12 @@ void screen_draw_input_reservation(void)
                               LCD_BLACK);
         }
     }
-    touch_set_context("", TOUCH_INPUT_RESERVATION);
+}
+
+void screen_draw_input_reservation(void)
+{
+    screen_clear(LCD_BACKGROUND);
+    screen_draw_keyboard("1234567890QWERTYUIOPASDFGHJKL< ZXCVBNM >");
 }
 
 void screen_draw_input_interface(void)
@@ -769,7 +787,6 @@ void screen_draw_input_interface(void)
                               LCD_BLACK);
         }
     }
-    touch_set_context("", TOUCH_INPUT_RUT);
 }
 
 static void screen_draw_qr(uint8_t *qrcode)

@@ -8,6 +8,9 @@
 
 static const char *TAG = "wifi_handler";
 
+static bool wifi_status = 0;
+static uint8_t wifi_tries = 0;
+
 static EventGroupHandle_t s_connect_event_group;
 
 static uint8_t http_ind = 0;
@@ -57,13 +60,6 @@ static void wifi_init_ap()
     ESP_LOGI(TAG, "wifi_init_ap finished. SSID:%s password:%s", "rd107ap2020", "dreamit1q2w3e");
 }
 
-static void wifi_end_ap()
-{
-    ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler));
-    ESP_ERROR_CHECK(esp_wifi_stop());
-    ESP_LOGI(TAG, "wifi_end_ap finished");
-}
-
 static void on_got_ip(void *arg, esp_event_base_t event_base,
                       int32_t event_id, void *event_data)
 {
@@ -71,13 +67,20 @@ static void on_got_ip(void *arg, esp_event_base_t event_base,
     memcpy(&ip_addr.ip_addr_i, &event->ip_info.ip, sizeof(ip4_addr_t));
     memcpy(&gw_addr.ip_addr_i, &event->ip_info.gw, sizeof(ip4_addr_t));
     xEventGroupSetBits(s_connect_event_group, GOT_IPV4_BIT);
+    wifi_status = true;
 }
 
 static void on_wifi_disconnect(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
     ESP_LOGI(TAG, "Wi-Fi disconnected, trying to reconnect...");
+    wifi_tries++;
     ESP_ERROR_CHECK(esp_wifi_connect());
+    if(wifi_tries == 5)
+    {
+        wifi_status = false;
+        xEventGroupSetBits(s_connect_event_group, GOT_IPV4_BIT);
+    }
 }
 
 static int8_t enter_opt()
@@ -139,12 +142,14 @@ static int8_t enter_password(char *in_opt)
     return 0;
 }
 
-void wifi_init(void)
+bool wifi_init(void)
 {
     int8_t opt            = -1;
     char net_password[50] = "";
     httpd_handle_t server = NULL;
     uint16_t ap_count     = 0;
+    http_ind              = 0;
+    wifi_tries            = 0;
     uint16_t number       = DEFAULT_SCAN_LIST_SIZE;
     wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE] = {0};
 
@@ -187,7 +192,7 @@ void wifi_init(void)
     };
     server = start_webserver(WIFI_WEBSERVER, &server_context);
 
-    screen_print_conf("Connect to\nrd107ap2020\nand browse to\n192.168.4.1/config\nto configure Wi-Fi");
+    screen_print_conf("Connect to\nrd107ap2020\nand browse to\n192.168.4.1/config\nto configure Wi-Fi", true);
     touch_set_context(&server_context, TOUCH_SET_WIFI);
 
     ESP_LOGI(TAG, "Select network from list [1-%d]. Enter 0 for default:", ap_count);
@@ -199,8 +204,14 @@ void wifi_init(void)
     if(http_ind == 0) opt = in_opt;
 
     stop_webserver(server);
-    wifi_end_ap();
+    ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler));
+    ESP_ERROR_CHECK(esp_wifi_stop());
+    ESP_LOGI(TAG, "wifi_end_ap finished");
     screen_clear(LCD_BACKGROUND);
+    screen_print_text(10, 10, "Connecting...",
+                      &Font24,
+                      LCD_WHITE,
+                      LCD_BLACK);
 
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &on_wifi_disconnect, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &on_got_ip, NULL));
@@ -247,4 +258,11 @@ void wifi_init(void)
         ESP_ERROR_CHECK(esp_wifi_connect());
     }
     xEventGroupWaitBits(s_connect_event_group, CONNECTED_BITS, true, true, portMAX_DELAY);
+    if(!wifi_status)
+    {   ESP_ERROR_CHECK(esp_wifi_stop());
+        ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &on_wifi_disconnect));
+        ESP_ERROR_CHECK(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &on_got_ip));
+        ESP_ERROR_CHECK(esp_event_loop_delete_default());
+    }
+    return wifi_status;
 }

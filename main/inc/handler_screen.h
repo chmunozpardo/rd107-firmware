@@ -11,8 +11,10 @@ void screen_clear(COLOR Color);
 void screen_task(void *arg);
 void screen_gram_scan(LCD_SCAN_DIR Scan_dir);
 
+void screen_draw_keyboard(const char *keyboard_str);
 void screen_draw_input_interface(void);
 void screen_draw_input_reservation(void);
+void screen_draw_from_rom(POINT Xpoint, POINT Ypoint, sFONT *table, COLOR Color_Background);
 
 void screen_draw_point(POINT Xpoint, POINT Ypoint, COLOR Color, DOT_PIXEL Dot_Pixel, DOT_STYLE Dot_FillWay);
 void screen_draw_line(POINT Xstart, POINT Ystart, POINT Xend, POINT Yend, COLOR Color, LINE_STYLE Line_Style, DOT_PIXEL Dot_Pixel);
@@ -23,7 +25,7 @@ void screen_print_char(POINT Xstart, POINT Ystart, const char Acsii_Char, sFONT 
 void screen_print_transp_char(POINT Xpoint, POINT Ypoint, const char Acsii_Char, sFONT *Font, COLOR Color_Foreground);
 void screen_print_text(POINT Xstart, POINT Ystart, const char *pString, sFONT *Font, COLOR Color_Background, COLOR Color_Foreground);
 void screen_print_transp_text(POINT Xstart, POINT Ystart, const char *pString, sFONT *Font, COLOR Color_Foreground);
-void screen_print_conf(char *text);
+void screen_print_conf(char *text, bool def_load);
 
 void screen_set_color(COLOR Color ,POINT Xpoint, POINT Ypoint);
 void screen_set_cursor(POINT Xpoint, POINT Ypoint);

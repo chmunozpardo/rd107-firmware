@@ -204,12 +204,13 @@ static void register_on_api(char *registration_code)
     fclose(f);
 }
 
-void data_register()
+bool data_register()
 {
     struct stat st;
     int8_t opt = -1;
     char in_opt[1] = "";
     char opt_web   = 0;
+    http_ind = 0;
 
     char registration_code[50] = "";
 
@@ -229,8 +230,12 @@ void data_register()
     strcat(screen_str, tmp_str);
     strcat(screen_str, "/config\nto configure this device");
 
-    screen_print_conf(screen_str);
-    touch_set_context(&server_context, TOUCH_SET_DEVICE);
+    if(stat(FILE_CONFIG, &st) == 0)
+    {
+        screen_print_conf(screen_str, true);
+        touch_set_context(&server_context, TOUCH_SET_DEVICE);
+    }
+    else screen_print_conf(screen_str, false);
 
     if(stat(FILE_CONFIG, &st) == 0)
     {
@@ -256,6 +261,25 @@ void data_register()
         ESP_LOGI(TAG, "There is no previous device configuration.");
         register_on_api(registration_code);
     }
+
+    memset(post_data, 0, 200);
+    strcat(post_data, "api_token=");
+    strcat(post_data, apitoken);
+    strcat(post_data, "&database=");
+    strcat(post_data, database);
+    strcat(post_data, "&id_controlador=");
+    strcat(post_data, idcontrolador);
+    strcat(post_data, "&nombreInstancia=");
+    strcat(post_data, database);
+    data_client_set(&parse_validation, URL_VALIDATION);
+    char validation_placeholder[6] = "";
+    FILE *f  = fopen(FILE_JSON, "r");
+    fscanf(f, "%s", validation_placeholder);
+    fclose(f);
+    remove(FILE_JSON);
+    if(strcmp(validation_placeholder, "OK") == 0) return true;
+    else return false;
+
 }
 
 void IRAM_ATTR data_task(void *arg)

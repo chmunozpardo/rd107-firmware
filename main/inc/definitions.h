@@ -38,60 +38,50 @@
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
 
-#define RD_MODELO           "RD-107"
-#define RD_VERSION          "0.1"
-#define RD_SERIE            "cmunoz"
-#define RD_CANALES          "1"
+#define RD_MODELO               "RD-107"
+#define RD_VERSION              "0.1"
+#define RD_SERIE                "cmunoz"
+#define RD_CANALES              "1"
 
-#define DISPLAY_TIME    2
+#define DISPLAY_TIME            2
 
-#define COLOR           uint16_t
-#define POINT           uint16_t
-#define LENGTH          uint16_t
+#define COLOR                   uint16_t
+#define POINT                   uint16_t
+#define LENGTH                  uint16_t
 
-#define LCD_X_MAXPIXEL  480
-#define LCD_Y_MAXPIXEL  320
-#define LCD_X           0
-#define LCD_Y           0
+#define LCD_X_MAXPIXEL          480
+#define LCD_Y_MAXPIXEL          320
+#define LCD_X                   0
+#define LCD_Y                   0
 
-#define LCD_WIDTH       (LCD_X_MAXPIXEL - 2 * LCD_X)
-#define LCD_HEIGHT      (LCD_Y_MAXPIXEL)
+#define LCD_WIDTH               (LCD_X_MAXPIXEL - 2 * LCD_X)
+#define LCD_HEIGHT              (LCD_Y_MAXPIXEL)
 
-#define LOW_Speed_Show  0
-#define HIGH_Speed_Show 1
+#define SCAN_DIR_DFT            D2U_L2R
+#define DOT_STYLE_DFT           DOT_FILL_AROUND
+#define DOT_PIXEL_DFT           DOT_PIXEL_1X1
 
-#define SCAN_DIR_DFT    D2U_L2R
-#define DOT_STYLE_DFT   DOT_FILL_AROUND
-#define DOT_PIXEL_DFT   DOT_PIXEL_1X1
+#define LOCAL_TIMEZONE          "<-04>4"
+#define LCD_KEYBOARD_MAY        "1234567890QWERTYUIOPASDFGHJKL<_ZXCVBNM >"
+#define LCD_KEYBOARD_MIN        "1234567890qwertyuiopasdfghjkl<^zxcvbnm >"
 
-#define WIFI_WEBSERVER      0
-#define REG_WEBSERVER       1
+#define HOSTNAME                "http://192.168.1.88:8080/"
+//#define HOSTNAME                "https://alpha-api.gestkontrol.cl/"
+#define URL                     HOSTNAME"control_acceso/obtenerMediosAccesoControladorBinario"
+#define URL_COMMAND             HOSTNAME"control_acceso/obtenerComandosManualesPendientesControlador"
+#define URL_QR                  HOSTNAME"control_acceso/obtenerCodigoQR"
+#define URL_VALIDATION          HOSTNAME"control_acceso/obtenerValidacion"
+#define URL_RESERVATIONS        HOSTNAME"control_acceso/obtenerReservasBinario"
+#define URL_REG                 HOSTNAME"control_acceso/registrarControlador"
 
-#define LOCAL_TIMEZONE      "<-04>4"
+#define FILE_JSON               "/spiffs/registers.json"
+#define FILE_CARDS              "/spiffs/registers.db"
+#define FILE_RESERVATIONS       "/spiffs/reservations.db"
+#define FILE_RUTS               "/spiffs/ruts.db"
 
-//#define HOSTNAME            "http://192.168.1.88:8080/"
-#define HOSTNAME            "https://alpha-api.gestkontrol.cl/"
-#define URL                 HOSTNAME"control_acceso/obtenerMediosAccesoControladorBinario"
-#define URL_COMMAND         HOSTNAME"control_acceso/obtenerComandosManualesPendientesControlador"
-#define URL_QR              HOSTNAME"control_acceso/obtenerCodigoQR"
-#define URL_RESERVATIONS    HOSTNAME"control_acceso/obtenerReservasBinario"
-#define URL_REG             HOSTNAME"control_acceso/registrarControlador"
-
-#define HTTPS_BUFFER        (4096)
-
-#define FILE_JSON           "/spiffs/registers.json"
-#define FILE_CARDS          "/spiffs/registers.db"
-#define FILE_RESERVATIONS   "/spiffs/reservations.db"
-#define FILE_RUTS           "/spiffs/ruts.db"
-
-#define FILE_CONFIG         "/spiffs/config.txt"
-#define FILE_WIFI           "/spiffs/wifi.txt"
-#define FILE_TIMESTAMP      "/spiffs/timestamp.txt"
-
-#define COPY_SIZE           512
-
-#define BUZZER_GPIO         21
-#define RELAY_GPIO          22
+#define FILE_CONFIG             "/spiffs/config.txt"
+#define FILE_WIFI               "/spiffs/wifi.txt"
+#define FILE_TIMESTAMP          "/spiffs/timestamp.txt"
 
 #define RUT                     rut_t
 #define CARD                    card_t
@@ -103,6 +93,10 @@
 #define CARD_READER_SIZE        (2048)
 #define RESERVATION_SIZE        sizeof(RESERVATION)
 #define RESERVATION_READER_SIZE (1024)
+
+#define HTTPS_BUFFER            (4096)
+
+#define COPY_SIZE               512
 
 #define RUT_COMPARE(A, B)               strncmp(A, B.rut, 10) == 0;
 #define CARD_COMPARE(A, B)              A.cardType == B.cardType && A.code1 == B.code1 && A.code2 == B.code2;
@@ -119,14 +113,17 @@
 #define HID_CODE2(value)    (value >> ( 1 + 6)) & 0xFFFF
 
 // WS2812 Low level and High level definition
-#define WS2812_ON       0xF8
-#define WS2812_OFF      0xE0
+#define WS2812_ON           0xF8
+#define WS2812_OFF          0xE0
 
 // SPI configuration for WS2812
-#define PIN_NUM_MISO    -1
-#define PIN_NUM_MOSI    4
-#define PIN_NUM_CLK     -1
-#define PIN_NUM_CS      -1
+#define PIN_NUM_MISO        -1
+#define PIN_NUM_MOSI        4
+#define PIN_NUM_CLK         -1
+#define PIN_NUM_CS          -1
+
+#define BUZZER_GPIO         21
+#define RELAY_GPIO          22
 
 // SPI configuration for TFT 3.5" display
 #define LCD_FREQ            20000000
@@ -163,47 +160,42 @@
 #define RGB_YELLOW  181, 181,   0
 #define RGB_WHITE   147, 147, 147
 #define RGB_ORANGE  255, 165,   0
-
-#define RGB_IDLE      RGB_CYAN
+#define RGB_IDLE            RGB_CYAN
 
 // Screen default values
-#define LCD_BACKGROUND  LCD_WHITE //Default background color
-#define FONT_BACKGROUND LCD_WHITE //Default font background color
-#define FONT_FOREGROUND LCD_BLACK  //Default font foreground color
+#define LCD_BACKGROUND      LCD_WHITE //Default background color
+#define FONT_BACKGROUND     LCD_WHITE //Default font background color
+#define FONT_FOREGROUND     LCD_BLACK  //Default font foreground color
 
 // Screen colors
-#define LCD_WHITE   0xFFFF
-#define LCD_BLACK   0x0000
-#define LCD_BLUE    0x001F
-#define LCD_GREEN   0x07E0
-#define LCD_RED     0xF800
-#define LCD_BRED    0XF81F
-#define LCD_GRED    0XFFE0
-#define LCD_GBLUE   0X07FF
-#define LCD_MAGENTA 0xF81F
-#define LCD_CYAN    0x7FFF
-#define LCD_YELLOW  0xFFE0
-#define LCD_BROWN   0XBC40
-#define LCD_BRRED   0XFC07
-#define LCD_GRAY    0X8430
+#define LCD_WHITE           0xFFFF
+#define LCD_BLACK           0x0000
+#define LCD_BLUE            0x001F
+#define LCD_GREEN           0x07E0
+#define LCD_RED             0xF800
+#define LCD_BRED            0XF81F
+#define LCD_GRED            0XFFE0
+#define LCD_GBLUE           0X07FF
+#define LCD_MAGENTA         0xF81F
+#define LCD_CYAN            0x7FFF
+#define LCD_YELLOW          0xFFE0
+#define LCD_BROWN           0XBC40
+#define LCD_BRRED           0XFC07
+#define LCD_GRAY            0X8430
 
-#define LCD_LOGO_TOP    0x0354
-#define LCD_LOGO_BOT    0x3a8c
-#define LCD_LOGO_TEXT   0x9515
+#define LCD_LOGO_TOP        0x0354
+#define LCD_LOGO_BOT        0x3a8c
+#define LCD_LOGO_TEXT       0x9515
 
-#define TOUCH_READ_N    4
-#define TOUCH_STD_RANGE 30
+#define TOUCH_READ_N        4
+#define TOUCH_STD_RANGE     30
 
-#define WIEGAND_D0    14
-#define WIEGAND_D1    17
+#define WIEGAND_D0          14
+#define WIEGAND_D1          17
 
-#define ESP_INTR_FLAG_DEFAULT          0
-#define DEFAULT_SCAN_LIST_SIZE         20
-#define CONFIG_ESP_TASK_WDT_TIMEOUT_MS 5
-
-#define MAX_HEIGHT_FONT         24
-#define MAX_WIDTH_FONT          17
-#define OFFSET_BITMAP           54
+#define ESP_INTR_FLAG_DEFAULT           0
+#define DEFAULT_SCAN_LIST_SIZE          20
+#define CONFIG_ESP_TASK_WDT_TIMEOUT_S   5
 
 typedef struct _tFont
 {
@@ -223,11 +215,19 @@ typedef struct screen_queue_t
 typedef enum {
     TOUCH_NONE = 0,
     TOUCH_SET_WIFI,
+    TOUCH_SET_WIFI_LIST,
+    TOUCH_SET_WIFI_PASSWORD,
     TOUCH_SET_DEVICE,
+    TOUCH_SET_DEVICE_CODE,
     TOUCH_QR_CODE,
     TOUCH_INPUT_RESERVATION,
     TOUCH_INPUT_RUT,
 } TOUCH_CONTEXT;
+
+typedef enum {
+    WIFI_WEBSERVER = 0,
+    REG_WEBSERVER,
+} WEBSERVER_CONTEXT;
 
 typedef enum {
     DOT_PIXEL_1X1 = 1,
