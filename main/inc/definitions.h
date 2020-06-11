@@ -1,5 +1,6 @@
 #pragma once
 
+// C standard libraries
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,15 +8,14 @@
 #include <time.h>
 #include <sys/time.h>
 
+// ESP-IDF components
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
-
 #include "driver/gpio.h"
 #include "driver/uart.h"
 #include "driver/spi_master.h"
-
 #include "esp_http_server.h"
 #include "esp_http_client.h"
 #include "esp_spiffs.h"
@@ -28,13 +28,10 @@
 #include "esp_err.h"
 #include "esp_task_wdt.h"
 #include "esp_int_wdt.h"
-
 #include "lwip/inet.h"
 #include "lwip/ip4_addr.h"
 #include "lwip/dns.h"
-
 #include "soc/uart_struct.h"
-
 #include "nvs_flash.h"
 #include "tcpip_adapter.h"
 
@@ -51,10 +48,8 @@
 
 #define LCD_X_MAXPIXEL          480
 #define LCD_Y_MAXPIXEL          320
-#define LCD_X                   0
-#define LCD_Y                   0
 
-#define LCD_WIDTH               (LCD_X_MAXPIXEL - 2 * LCD_X)
+#define LCD_WIDTH               (LCD_X_MAXPIXEL)
 #define LCD_HEIGHT              (LCD_Y_MAXPIXEL)
 
 #define SCAN_DIR_DFT            D2U_L2R
@@ -65,6 +60,7 @@
 #define LCD_KEYBOARD_MAY        "1234567890QWERTYUIOPASDFGHJKL<_ZXCVBNM >"
 #define LCD_KEYBOARD_MIN        "1234567890qwertyuiopasdfghjkl<^zxcvbnm >"
 
+// URLs used to syncronize registers
 #define HOSTNAME                "http://192.168.1.88:8080/"
 //#define HOSTNAME                "https://alpha-api.gestkontrol.cl/"
 #define URL                     HOSTNAME"control_acceso/obtenerMediosAccesoControladorBinario"
@@ -74,23 +70,28 @@
 #define URL_RESERVATIONS        HOSTNAME"control_acceso/obtenerReservasBinario"
 #define URL_REG                 HOSTNAME"control_acceso/registrarControlador"
 
+// Local files to store registers
 #define FILE_JSON               "/spiffs/registers.json"
 #define FILE_CARDS              "/spiffs/registers.db"
 #define FILE_RESERVATIONS       "/spiffs/reservations.db"
 #define FILE_RUTS               "/spiffs/ruts.db"
 
+// Local files to store configuration data
 #define FILE_CONFIG             "/spiffs/config.txt"
 #define FILE_WIFI               "/spiffs/wifi.txt"
 #define FILE_TIMESTAMP          "/spiffs/timestamp.txt"
 
+// Renaming of registers structures for easy reading
 #define RUT                     rut_t
 #define CARD                    card_t
 #define RESERVATION             reservation_t
 
 #define RUT_SIZE                sizeof(RUT)
 #define RUT_READER_SIZE         (1024)
+
 #define CARD_SIZE               sizeof(CARD)
 #define CARD_READER_SIZE        (2048)
+
 #define RESERVATION_SIZE        sizeof(RESERVATION)
 #define RESERVATION_READER_SIZE (1024)
 
@@ -100,9 +101,9 @@
 
 #define RUT_COMPARE(A, B)               strncmp(A, B.rut, 10) == 0;
 #define CARD_COMPARE(A, B)              A.cardType == B.cardType && A.code1 == B.code1 && A.code2 == B.code2;
-#define RESERVATION_COMPARE_QR(A, B)    strncmp(A, B.qr, 8) == 0 && system_now >= B.init_time && system_now <= B.end_time;
-#define RESERVATION_COMPARE_RUT(A, B)   A.code1 == B.code1 && A.code2 == B.code2 && system_now >= B.init_time && system_now <= B.end_time;
-#define RESERVATION_COMPARE_CODE(A, B)  strncmp(A, B.code, 6) == 0 && system_now >= B.init_time && system_now <= B.end_time;
+#define RESERVATION_COMPARE_QR(A, B)    (strncmp(A, B.qr, 8) == 0) && (system_now >= B.init_time) && (system_now <= B.end_time);
+#define RESERVATION_COMPARE_RUT(A, B)   (A.code1 == B.code1) && (A.code2 == B.code2) && (system_now >= B.init_time) && (system_now <= B.end_time);
+#define RESERVATION_COMPARE_CODE(A, B)  (strncmp(A, B.code, 6) == 0) && (system_now >= B.init_time) && (system_now <= B.end_time);
 
 #define MIFARE(value)       (value & 0x000000FF) << 24 | \
                             (value & 0x0000FF00) <<  8 | \
@@ -124,6 +125,10 @@
 
 #define BUZZER_GPIO         21
 #define RELAY_GPIO          22
+
+#define WDI_PIN_TRIGGER     16
+#define WDI_PIN_TX          18
+#define WDI_PIN_RX          32
 
 // SPI configuration for TFT 3.5" display
 #define LCD_FREQ            20000000
@@ -152,14 +157,14 @@
 #define RGB_RESET_TIME      40  // Reset time
 
 // Simple color definitions
-#define RGB_RED     255,   0,   0
-#define RGB_GREEN     0, 255,   0
-#define RGB_BLUE      0,   0, 255
-#define RGB_CYAN      0, 181, 181
-#define RGB_MAGENTA 181,   0, 181
-#define RGB_YELLOW  181, 181,   0
-#define RGB_WHITE   147, 147, 147
-#define RGB_ORANGE  255, 165,   0
+#define RGB_RED             255,   0,   0
+#define RGB_GREEN             0, 255,   0
+#define RGB_BLUE              0,   0, 255
+#define RGB_CYAN              0, 181, 181
+#define RGB_MAGENTA         181,   0, 181
+#define RGB_YELLOW          181, 181,   0
+#define RGB_WHITE           147, 147, 147
+#define RGB_ORANGE          255, 165,   0
 #define RGB_IDLE            RGB_CYAN
 
 // Screen default values
@@ -205,6 +210,7 @@ typedef struct _tFont
     COLOR color;
 } sFONT;
 
+// Screen
 typedef struct screen_queue_t
 {
     char msg[7];
@@ -212,6 +218,7 @@ typedef struct screen_queue_t
     uint8_t timer;
 } screen_queue_t;
 
+// Touch controller state machine
 typedef enum {
     TOUCH_NONE = 0,
     TOUCH_SET_WIFI,
@@ -224,6 +231,7 @@ typedef enum {
     TOUCH_INPUT_RUT,
 } TOUCH_CONTEXT;
 
+// 
 typedef enum {
     WIFI_WEBSERVER = 0,
     REG_WEBSERVER,
@@ -305,11 +313,13 @@ typedef struct {
     POINT LCD_Y_Adjust;
 } LCD_DIS;
 
+// RUT data structure
 typedef struct __attribute__((packed, aligned(1))) rut_structure{
     char rut[10];
     uint32_t index;
 } rut_t;
 
+// Card data structure
 typedef struct __attribute__((packed, aligned(1))) card_structure{
     uint8_t cardType;
     uint8_t permisos;
@@ -320,6 +330,7 @@ typedef struct __attribute__((packed, aligned(1))) card_structure{
     uint32_t index;
 } card_t;
 
+// Reservation data structure
 typedef struct __attribute__((packed, aligned(1))) reservation_structure{
     char qr[8];
     char code[6];
@@ -336,6 +347,7 @@ typedef union ip4_str
     struct { uint8_t addr[4]; };
 } ip4_str;
 
+// 
 typedef struct wifi_context
 {
     char *wifi_password;
@@ -345,6 +357,7 @@ typedef struct wifi_context
     uint8_t *http_ind;
 } wifi_context_t;
 
+//
 typedef struct reg_context
 {
     char *registration_code;
@@ -408,6 +421,7 @@ extern xQueueHandle rgb_task_queue;
 extern xQueueHandle relay_task_queue;
 extern xQueueHandle buzzer_task_queue;
 extern xQueueHandle screen_task_queue;
+extern xQueueHandle reader_task_queue;
 
 extern SemaphoreHandle_t rut_semaphore;
 extern SemaphoreHandle_t card_semaphore;
@@ -418,6 +432,7 @@ extern TaskHandle_t rgb_task_handle;
 extern TaskHandle_t data_task_handle;
 extern TaskHandle_t relay_task_handle;
 extern TaskHandle_t buzzer_task_handle;
+extern TaskHandle_t reader_task_handle;
 extern TaskHandle_t screen_task_handle;
 extern TaskHandle_t wiegand_task_handle;
 extern TaskHandle_t debounce_task_handle;

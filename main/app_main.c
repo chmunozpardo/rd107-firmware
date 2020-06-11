@@ -11,13 +11,16 @@
 #include "handler_spi.h"
 #include "handler_sntp.h"
 #include "handler_wifi.h"
+#include "handler_reader.h"
 
 //static const char* TAG = "app_main";
 
 uint8_t touch_context_status = 0;
+
 uint32_t rut_size            = 0;
 uint32_t card_size           = 0;
 uint32_t reservation_size    = 0;
+
 uint64_t timestamp           = 0;
 uint64_t timestamp_temp      = 0;
 
@@ -26,12 +29,14 @@ char screen_qr[7] = "000000\0";
 xQueueHandle rgb_task_queue    = NULL;
 xQueueHandle relay_task_queue  = NULL;
 xQueueHandle buzzer_task_queue = NULL;
+xQueueHandle reader_task_queue = NULL;
 xQueueHandle screen_task_queue = NULL;
 
 TaskHandle_t rgb_task_handle      = NULL;
 TaskHandle_t data_task_handle     = NULL;
 TaskHandle_t relay_task_handle    = NULL;
 TaskHandle_t buzzer_task_handle   = NULL;
+TaskHandle_t reader_task_handle   = NULL;
 TaskHandle_t screen_task_handle   = NULL;
 TaskHandle_t wiegand_task_handle  = NULL;
 TaskHandle_t debounce_task_handle = NULL;
@@ -81,6 +86,7 @@ static void setup()
     relay_init();
     touch_init_f();
     buzzer_init();
+    reader_init();
     screen_init();
     wiegand_init();
 
@@ -108,6 +114,7 @@ static void setup()
     xTaskCreatePinnedToCore(buzzer_task , "bzr_task", 2048, NULL, 1, &buzzer_task_handle , 0);
     xTaskCreatePinnedToCore(data_task   , "dat_task", 4096, NULL, 1, &data_task_handle   , 1);
     xTaskCreatePinnedToCore(wiegand_task, "wgn_task", 2048, NULL, 0, &wiegand_task_handle, 1);
+    xTaskCreatePinnedToCore(reader_task , "rdr_task", 2048, NULL, 0, &reader_task_handle , 1);
 }
 
 void app_main()

@@ -199,9 +199,6 @@ static void register_on_api(char *registration_code)
     strcat(post_data, tmp_str);
 
     data_client_set(&parse_register, URL_REG);
-    FILE *f  = fopen(FILE_CONFIG, "w");
-    fprintf(f, "%s,%s,%s", apitoken, idcontrolador, database);
-    fclose(f);
 }
 
 bool data_register()
@@ -277,7 +274,13 @@ bool data_register()
     fscanf(f, "%s", validation_placeholder);
     fclose(f);
     remove(FILE_JSON);
-    if(strcmp(validation_placeholder, "OK") == 0) return true;
+    if(strcmp(validation_placeholder, "OK") == 0)
+    {
+        FILE *f  = fopen(FILE_CONFIG, "w");
+        fprintf(f, "%s,%s,%s", apitoken, idcontrolador, database);
+        fclose(f);
+        return true;
+    }
     else return false;
 
 }

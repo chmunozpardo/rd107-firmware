@@ -90,6 +90,7 @@ void spi_init()
         .mode = 0,
         .spics_io_num = -1,
         .queue_size = 1,
+        .flags = SPI_DEVICE_NO_DUMMY,
     };
 
     ESP_LOGI(TAG, "Initializing SPI for RGB");

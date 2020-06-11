@@ -12,6 +12,7 @@ idf_component_register(SRCS
                     "src/handler_relay.c"
                     "src/handler_touch.c"
                     "src/handler_buzzer.c"
+                    "src/handler_reader.c"
                     "src/handler_screen.c"
                     "src/handler_search.c"
                     "src/handler_wiegand.c"

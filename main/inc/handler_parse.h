@@ -12,6 +12,7 @@ void parse_command(void);
 void parse_register(void);
 void parse_validation(void);
 void parse_reservations(void);
+void parse_reader(char *input);
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,5 @@
+// Workspace settings
+{
+    "editor.renderWhitespace": "all",
+    "terminal.integrated.shellArgs.linux": [ "-l"]
+}

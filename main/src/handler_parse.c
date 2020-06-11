@@ -1,4 +1,5 @@
 #include "handler_parse.h"
+#include "handler_search.h"
 
 static const char* TAG = "parse_handler";
 
@@ -8,6 +9,24 @@ static DRAM_ATTR uint32_t new_regs  =  0;
 static DRAM_ATTR uint32_t read_size =  0;
 static FILE *f = NULL;
 static FILE *g = NULL;
+
+void parse_reader(char *input)
+{
+    ESP_LOGD(TAG, "Input = %s", input);
+    char rut_value[16] = "";
+    if(sscanf(input, " https://portal.sidiv.registrocivil.cl/docstatus?RUN=%[^&]", rut_value) == 1)
+    {
+        search_rut(rut_value);
+        return;
+    }
+    else if(sscanf(input, " %[^&]", rut_value) == 1)
+    {
+        search_reservation_code(rut_value);
+        return;
+    }
+    SCREEN_SIGNAL("BAD", 1, DISPLAY_TIME);
+    return;
+}
 
 void parse_register(void)
 {
@@ -149,6 +168,7 @@ void IRAM_ATTR parse_command(void)
                         "\"estado\":\"En cola\"}%n", &num0, &num1, &num2, cmd_parser, &chars) > 0)
     {
         offset += chars;
+        SCREEN_SIGNAL("GOOD", 1, DISPLAY_TIME);
         RELAY_SIGNAL(DISPLAY_TIME);
         if(*(cmd_reader + offset) == '\0') break;
         else ++offset;
